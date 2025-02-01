@@ -1,0 +1,10 @@
+[workspace]
+members = [
+    "aitos",
+    "displaitor",
+]
+resolver = "2"
+
+[workspace.dependencies]
+embedded-error-chain = "^1.0"
+embedded-graphics = "^0.8"

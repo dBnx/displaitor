@@ -1,0 +1,50 @@
+use core::marker::PhantomData;
+
+use embedded_graphics::{
+    pixelcolor::Rgb565,
+    prelude::*,
+    primitives::{PrimitiveStyle, Rectangle},
+};
+use heapless::Vec;
+
+use crate::{App, Controls};
+
+pub struct Dummy<D, C> 
+where
+    D: DrawTarget<Color = C>,
+    C: PixelColor + RgbColor,  
+{
+    _marker: PhantomData<D>,
+}
+
+impl<D, C> Dummy<D, C>
+where
+    D: DrawTarget<Color = C>,
+    C: PixelColor + RgbColor,  
+{
+    pub fn new() -> Self {
+        Self {
+            _marker: Default::default(),
+        }
+    }
+}
+
+impl<D, C> App for Dummy<D, C>
+where
+    D: DrawTarget<Color = C>,
+    C: PixelColor + RgbColor, 
+{
+    type Target = D;
+    type Color = C;
+
+    fn update(&mut self, dt: i64, _t: i64, controls: &Controls) {}
+
+    fn render(&mut self, target: &mut Self::Target) {}
+
+    fn teardown(&mut self) {}
+
+    fn close_request(&self) -> bool {
+        true
+    }
+}
+

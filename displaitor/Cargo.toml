@@ -1,0 +1,15 @@
+[package]
+name = "displaytor"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+embedded-error-chain = {workspace = true}
+embedded-graphics = {workspace = true}
+embedded-graphics-simulator = "0.7"
+tinyqoi = "0.2.0"
+
+anyhow = "^1.0"
+thiserror = "^2.0.11"
+spin = "0.9.8"
+heapless = "0.8.0"
