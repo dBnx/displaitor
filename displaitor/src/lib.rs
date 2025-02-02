@@ -1,5 +1,6 @@
 #![allow(unused)]
 #![no_std]
+#![feature(iter_collect_into)]
 
 #[macro_use]
 extern crate alloc;
@@ -19,10 +20,12 @@ use trait_app::Color;
 
 // Replace with a mod.rs ?
 pub mod apps {
+    mod app_animation;
     mod app_dummy;
     mod app_image;
     mod app_menu;
     mod app_names;
+    pub use app_animation::Animation;
     pub use app_dummy::Dummy;
     pub use app_image::Image;
     pub use app_menu::{Menu, MenuEntry};
@@ -46,6 +49,38 @@ where
     // C: PixelColor + RgbColor + 'static
     C: Color + 'static,
 {
+    let animation_menu = apps::Menu::new([
+        apps::MenuEntry {
+            name: "Ferd",
+            app: Box::new(apps::Image::<D, C>::new(include_bytes!(
+                "../assets/Ferd.qoi"
+            ))),
+        },
+        apps::MenuEntry {
+            name: "Battle Bull",
+            app: Box::new(apps::Image::new(include_bytes!(
+                "../assets/Battle Bull.qoi"
+            ))),
+        },
+        apps::MenuEntry {
+            name: "Nyankatz",
+            app: Box::new(apps::Animation::new([
+                include_bytes!("../assets/nyan/01.qoi"),
+                include_bytes!("../assets/nyan/02.qoi"),
+                include_bytes!("../assets/nyan/03.qoi"),
+                include_bytes!("../assets/nyan/04.qoi"),
+                include_bytes!("../assets/nyan/05.qoi"),
+                include_bytes!("../assets/nyan/06.qoi"),
+                include_bytes!("../assets/nyan/07.qoi"),
+                include_bytes!("../assets/nyan/08.qoi"),
+                include_bytes!("../assets/nyan/09.qoi"),
+                include_bytes!("../assets/nyan/10.qoi"),
+                include_bytes!("../assets/nyan/11.qoi"),
+                include_bytes!("../assets/nyan/12.qoi"),
+            ])),
+        },
+    ]);
+
     apps::Menu::new([
         apps::MenuEntry {
             name: "Pong",
@@ -56,90 +91,11 @@ where
             app: Box::new(games::Snake::<64, 32, 32, D, C>::new()),
         },
         apps::MenuEntry {
-            name: "Statics",
-            app: Box::new(apps::Menu::new([
-                apps::MenuEntry {
-                    name: "Nyankatz",
-                    app: Box::new(apps::Image::<D, C>::new(include_bytes!(
-                        "../assets/Ferd.qoi"
-                    ))),
-                },
-                apps::MenuEntry {
-                    name: "Nyankatz",
-                    app: Box::new(apps::Image::new(include_bytes!(
-                        "../assets/Battle Bull.qoi"
-                    ))),
-                },
-                apps::MenuEntry {
-                    name: "Nyankatz",
-                    app: Box::new(apps::Image::new(include_bytes!("../assets/01.qoi"))),
-                },
-            ])),
+            name: "Imagine!",
+            app: Box::new(animation_menu),
         },
     ])
 }
-
-/*
-pub struct MainApp<'a, D, C>
-where
-    D: DrawTarget<Color = C>,
-    C: PixelColor + RgbColor,
-{
-    pub(crate) menu: apps::Menu<'a, 3, D, C>,
-    pub(crate) app1: games::Pong<D, C>,
-    pub(crate) app2: games::Snake<64, 32, 32, D, C>,
-    pub(crate) app3: games::Pong<D, C>,
-}
-
-impl<'a, D, C> MainApp<'a, D, C>
-where
-    D: DrawTarget<Color = C>,
-    C: PixelColor + RgbColor,
-{
-    fn new() -> Self {
-        let mut a = apps::Dummy::new();
-        let mut b = apps::Dummy::new();
-        let mut c = apps::Dummy::new();
-        let dummy_menu = Menu::new([
-            apps::MenuEntry {
-                name: "-",
-                app: &mut a,
-            },
-            apps::MenuEntry {
-                name: "-",
-                app: &mut b,
-            },
-            apps::MenuEntry {
-                name: "-",
-                app: &mut c,
-            },
-        ]);
-
-        let main_app = MainApp {
-            app1: games::Pong::new(64, 32),
-            app2: games::Snake::new(),
-            app3: games::Pong::new(64, 32),
-            menu: dummy_menu,
-        };
-
-        main_app.menu = apps::Menu::new([
-            apps::MenuEntry {
-                name: "Pong",
-                app: &mut main_app.app1,
-            },
-            apps::MenuEntry {
-                name: "Snake",
-                app: &mut main_app.app2,
-            },
-            apps::MenuEntry {
-                name: "Nyancat",
-                app: &mut main_app.app3,
-            },
-        ]);
-
-        main_app
-    }
-} */
 
 fn add(left: u64, right: u64) -> u64 {
     left + right
