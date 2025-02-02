@@ -11,7 +11,7 @@ pub mod string_buffer;
 mod trait_app;
 
 use alloc::boxed::Box;
-use apps::Menu;
+use apps::{Menu, ScrollingText};
 pub use controls::Controls;
 use embedded_graphics::prelude::{DrawTarget, PixelColor, RgbColor};
 pub(crate) use key_release::KeyReleaseEvent;
@@ -24,12 +24,12 @@ pub mod apps {
     mod app_dummy;
     mod app_image;
     mod app_menu;
-    mod app_names;
+    mod app_scrolling_text;
     pub use app_animation::Animation;
     pub use app_dummy::Dummy;
     pub use app_image::Image;
     pub use app_menu::{Menu, MenuEntry};
-    pub use app_names::Names;
+    pub use app_scrolling_text::ScrollingText;
 }
 
 pub mod games {
@@ -81,7 +81,7 @@ where
         },
     ]);
 
-    apps::Menu::new([
+    let m = apps::Menu::new([
         apps::MenuEntry {
             name: "Pong",
             app: Box::new(games::Pong::<D, C>::new(64, 32)),
@@ -94,7 +94,9 @@ where
             name: "Imagine!",
             app: Box::new(animation_menu),
         },
-    ])
+    ]);
+    m
+    // ScrollingText::new(const_str::split!(include_str!("../assets/names.txt"), "\n"))
 }
 
 fn add(left: u64, right: u64) -> u64 {

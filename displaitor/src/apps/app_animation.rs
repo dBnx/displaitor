@@ -8,7 +8,6 @@ use embedded_graphics::{
     prelude::*,
     primitives::{PrimitiveStyle, Rectangle},
 };
-use heapless::Vec;
 use tinyqoi::Qoi;
 
 use crate::{trait_app::Color, App, Controls, KeyReleaseEvent};

@@ -63,8 +63,9 @@ where
     entries: [MenuEntry<D, C>; MAX_ENTRIES],
     selected_index: usize,
     active_index: Option<usize>,
-    last_movement_update: i64,
 
+    nav_up_request: KeyReleaseEvent,
+    nav_down_request: KeyReleaseEvent,
     selection_request: KeyReleaseEvent,
     close_request: KeyReleaseEvent,
 }
@@ -79,7 +80,9 @@ where
             entries,
             selected_index: 0,
             active_index: None,
-            last_movement_update: 0,
+
+            nav_up_request: KeyReleaseEvent::new(),
+            nav_down_request: KeyReleaseEvent::new(),
             selection_request: KeyReleaseEvent::new(),
             close_request: KeyReleaseEvent::new(),
         }
@@ -116,9 +119,9 @@ where
     }
 
     fn update_process_menu_movement(&mut self, controls: &Controls) {
-        if controls.dpad_down {
+        if self.nav_down_request.fired() {
             self.select_next();
-        } else if controls.dpad_up {
+        } else if self.nav_up_request.fired() {
             self.select_previous();
         } else if self.selection_request.fired() {
             self.active_index = Some(self.selected_index);
@@ -138,6 +141,8 @@ where
     fn reset_state(&mut self) {
         self.active_index = None;
         self.selected_index = 0;
+        self.nav_up_request.reset();
+        self.nav_down_request.reset();
         self.selection_request.reset();
         self.close_request.reset();
     }
@@ -149,17 +154,10 @@ where
 
         // We are in the menu itself and don't delegate the call!
         self.close_request.update(controls.buttons_b);
-
-        // Only do menu movement, when at least 100ms passed since the last action,
-        // and the last action completed. (?)
-        const MIN_UPDATE_DT_US: i64 = 110 * 1000; // 100 ms
-        if t - self.last_movement_update < MIN_UPDATE_DT_US {
-            return;
-        }
-
+        self.nav_up_request.update(controls.dpad_up);
+        self.nav_down_request.update(controls.dpad_down);
         self.selection_request.update(controls.buttons_a);
 
-        self.last_movement_update = t;
         self.update_process_menu_movement(controls);
     }
 
