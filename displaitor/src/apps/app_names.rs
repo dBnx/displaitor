@@ -8,7 +8,6 @@ use embedded_graphics::{
     text::Text,
 };
 
-
 static NAMES: &'static str = include_str!("../../assets/names.txt");
 
 pub struct Names {}
@@ -34,7 +33,6 @@ where
     .into_styled(line_style)
     .draw(display)
     .unwrap();
-
 
     Line::new(
         Point::new(48 / 2, 16 / 2 + 3),

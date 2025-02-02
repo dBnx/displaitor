@@ -7,13 +7,14 @@ use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::{PrimitiveStyle, Rectangle};
 use embedded_graphics::text::Text;
 
-use crate::{string_buffer, App, Controls};
+use crate::trait_app::Color;
+use crate::{string_buffer, App, Controls, KeyReleaseEvent};
 
 // TODO: Make screen size a parameter of the App struct.
-pub struct Pong<D, C> 
+pub struct Pong<D, C>
 where
     D: DrawTarget<Color = C>,
-    C: PixelColor + RgbColor,  
+    C: PixelColor + RgbColor,
 {
     ball_pos: Point,
     ball_velocity: Point,
@@ -26,10 +27,15 @@ where
     screen_height: i32,
     score1: i32,
     score2: i32,
+
+    last_update: i64,
+    dead: bool,
+    close_request: KeyReleaseEvent,
+
     _marker: PhantomData<D>,
 }
 
-impl<D, C> Pong<D, C> 
+impl<D, C> Pong<D, C>
 where
     D: DrawTarget<Color = C>,
     C: PixelColor + RgbColor,
@@ -47,26 +53,49 @@ where
             screen_height: screen_height as i32,
             score1: 0,
             score2: 0,
+
+            last_update: 0,
+            dead: false,
+            close_request: KeyReleaseEvent::new(),
+
             _marker: Default::default(),
         }
     }
 }
 
-impl<D, C> App for Pong<D, C> 
+impl<D, C> App for Pong<D, C>
 where
     D: DrawTarget<Color = C>,
-    C: PixelColor + RgbColor,
+    C: Color,
 {
     type Target = D;
     type Color = C;
 
-    fn update(&mut self, dt: i64, _t: i64, controls: &Controls) {
+    fn reset_state(&mut self) {
+        self.dead = false;
+        self.last_update = 0;
+        self.close_request.reset();
+    }
+
+    fn update(&mut self, dt: i64, t: i64, controls: &Controls) {
+        // Kill game with 'B'
+        self.close_request.update(controls.buttons_b);
+
+        // Time gate
+        const MIN_UPDATE_DT_US: i64 = 15 * 1000; // 100 ms
+        if t - self.last_update < MIN_UPDATE_DT_US {
+            return;
+        }
+        self.last_update = t;
+
         // Update paddles based on controls
+        const MOVEMENT_SPEED: i32 = 2;
         if controls.dpad_up {
-            self.paddle1_pos = (self.paddle1_pos - 4).max(0);
+            self.paddle1_pos = (self.paddle1_pos - MOVEMENT_SPEED).max(0);
         }
         if controls.dpad_down {
-            self.paddle1_pos = (self.paddle1_pos + 4).min(self.screen_height - self.paddle_height);
+            self.paddle1_pos =
+                (self.paddle1_pos + MOVEMENT_SPEED).min(self.screen_height - self.paddle_height);
         }
 
         // Update ball position
@@ -109,8 +138,7 @@ where
         }
     }
 
-    fn render(&mut self, target: &mut Self::Target)
-    {
+    fn render(&mut self, target: &mut Self::Target) {
         // Clear the screen
         let _background = Rectangle::new(
             Point::zero(),
@@ -163,4 +191,8 @@ where
     }
 
     fn teardown(&mut self) {}
+
+    fn close_request(&self) -> bool {
+        self.close_request.fired()
+    }
 }

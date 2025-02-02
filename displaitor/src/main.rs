@@ -1,9 +1,12 @@
 use displaytor::{App, Controls};
 use embedded_graphics::{pixelcolor::Rgb565, prelude::*};
 use embedded_graphics_simulator::{
-    sdl2::Keycode, OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window
+    sdl2::Keycode, OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window,
 };
-use std::{thread::sleep, time::{Duration, Instant}};
+use std::{
+    thread::sleep,
+    time::{Duration, Instant},
+};
 
 const SCREEN_HEIGHT: u32 = 32;
 const SCREEN_WIDTH: u32 = 64;
@@ -16,9 +19,9 @@ fn main() -> Result<(), core::convert::Infallible> {
     Ok(())
 }
 
-pub fn run_app<T>(app: &mut T) 
+pub fn run_app<T>(app: &mut T)
 where
-    T: App<Target = SimulatorDisplay<Rgb565>, Color = Rgb565>
+    T: App<Target = SimulatorDisplay<Rgb565>, Color = Rgb565>,
 {
     // Create a simulated display with a resolution of 240x240 pixels
     let mut display = SimulatorDisplay::<Rgb565>::new(Size::new(SCREEN_WIDTH, SCREEN_HEIGHT));
@@ -53,7 +56,7 @@ where
     'game_loop: loop {
         // Calculate elapsed time
         let now = Instant::now();
-        let dt = now.duration_since(last_time).as_millis() as i64;
+        let dt = now.duration_since(last_time).as_micros() as i64;
         elapsed_time += dt;
         last_time = now;
 

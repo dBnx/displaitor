@@ -5,6 +5,7 @@
 extern crate alloc;
 
 mod controls;
+mod key_release;
 pub mod string_buffer;
 mod trait_app;
 
@@ -12,13 +13,18 @@ use alloc::boxed::Box;
 use apps::Menu;
 pub use controls::Controls;
 use embedded_graphics::prelude::{DrawTarget, PixelColor, RgbColor};
+pub(crate) use key_release::KeyReleaseEvent;
 pub use trait_app::App;
+use trait_app::Color;
 
+// Replace with a mod.rs ?
 pub mod apps {
     mod app_dummy;
+    mod app_image;
     mod app_menu;
     mod app_names;
     pub use app_dummy::Dummy;
+    pub use app_image::Image;
     pub use app_menu::{Menu, MenuEntry};
     pub use app_names::Names;
 }
@@ -37,7 +43,8 @@ pub mod games {
 pub fn main_app<D, C>() -> impl App<Target = D, Color = C>
 where
     D: DrawTarget<Color = C> + 'static,
-    C: PixelColor + RgbColor + 'static
+    // C: PixelColor + RgbColor + 'static
+    C: Color + 'static,
 {
     apps::Menu::new([
         apps::MenuEntry {
@@ -45,12 +52,29 @@ where
             app: Box::new(games::Pong::<D, C>::new(64, 32)),
         },
         apps::MenuEntry {
-            name: "Snake",
+            name: "Schnek",
             app: Box::new(games::Snake::<64, 32, 32, D, C>::new()),
         },
         apps::MenuEntry {
-            name: "Nyancat",
-            app: Box::new(games::Pong::<D, C>::new(64, 32)),
+            name: "Statics",
+            app: Box::new(apps::Menu::new([
+                apps::MenuEntry {
+                    name: "Nyankatz",
+                    app: Box::new(apps::Image::<D, C>::new(include_bytes!(
+                        "../assets/Ferd.qoi"
+                    ))),
+                },
+                apps::MenuEntry {
+                    name: "Nyankatz",
+                    app: Box::new(apps::Image::new(include_bytes!(
+                        "../assets/Battle Bull.qoi"
+                    ))),
+                },
+                apps::MenuEntry {
+                    name: "Nyankatz",
+                    app: Box::new(apps::Image::new(include_bytes!("../assets/01.qoi"))),
+                },
+            ])),
         },
     ])
 }

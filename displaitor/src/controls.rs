@@ -8,7 +8,6 @@ pub struct Controls {
     pub dpad_right: bool,
 }
 
-
 impl Controls {
     pub fn new(
         buttons_a: bool,

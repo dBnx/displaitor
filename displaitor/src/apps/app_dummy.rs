@@ -7,12 +7,12 @@ use embedded_graphics::{
 };
 use heapless::Vec;
 
-use crate::{App, Controls};
+use crate::{trait_app::Color, App, Controls};
 
-pub struct Dummy<D, C> 
+pub struct Dummy<D, C>
 where
     D: DrawTarget<Color = C>,
-    C: PixelColor + RgbColor,  
+    C: PixelColor + RgbColor,
 {
     _marker: PhantomData<D>,
 }
@@ -20,7 +20,7 @@ where
 impl<D, C> Dummy<D, C>
 where
     D: DrawTarget<Color = C>,
-    C: PixelColor + RgbColor,  
+    C: PixelColor + RgbColor,
 {
     pub fn new() -> Self {
         Self {
@@ -32,10 +32,12 @@ where
 impl<D, C> App for Dummy<D, C>
 where
     D: DrawTarget<Color = C>,
-    C: PixelColor + RgbColor, 
+    C: Color,
 {
     type Target = D;
     type Color = C;
+
+    fn reset_state(&mut self) {}
 
     fn update(&mut self, dt: i64, _t: i64, controls: &Controls) {}
 
@@ -47,4 +49,3 @@ where
         true
     }
 }
-

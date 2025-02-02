@@ -4,7 +4,6 @@ use spin::{Mutex, MutexGuard};
 
 static GLOBAL_BUFFER: Mutex<FixedBuffer<128>> = Mutex::new(FixedBuffer::new());
 
-
 pub fn get_global_buffer() -> spin::MutexGuard<'static, FixedBuffer<128>> {
     GLOBAL_BUFFER.lock()
 }
@@ -14,7 +13,6 @@ pub fn get_global_buffer_cleared() -> spin::MutexGuard<'static, FixedBuffer<128>
     buffer.clear();
     buffer
 }
-
 
 pub struct FixedBuffer<const N: usize> {
     buffer: [u8; N], // Adjust size as needed
