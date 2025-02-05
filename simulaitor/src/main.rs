@@ -1,4 +1,4 @@
-use displaytor::{App, Controls};
+use displaitor::{App, Controls};
 use embedded_graphics::{pixelcolor::Rgb565, prelude::*};
 use embedded_graphics_simulator::{
     sdl2::Keycode, OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window,
@@ -12,9 +12,7 @@ const SCREEN_HEIGHT: u32 = 32;
 const SCREEN_WIDTH: u32 = 64;
 
 fn main() -> Result<(), core::convert::Infallible> {
-    // let mut app = displaytor::games::Pong::new(SCREEN_WIDTH, SCREEN_HEIGHT);
-    // let mut app: displaytor::games::Snake<SCREEN_WIDTH, SCREEN_HEIGHT, 32> = displaytor::games::Snake::new();
-    let mut app = displaytor::main_app();
+    let mut app = displaitor::main_app();
     run_app(&mut app);
     Ok(())
 }
@@ -33,7 +31,7 @@ where
         .pixel_spacing(4)
         .build();
 
-    let mut window = Window::new("Displaytor Simulator", &output_settings);
+    let mut window = Window::new("Displaitor Simulator", &output_settings);
 
     // Timer for controlling the game loop
     // let mut timer = SimulatorTimer::new(Duration::from_millis(16)); // ~60 FPS

@@ -9,7 +9,7 @@ use embedded_graphics::{
 };
 use heapless::Vec;
 
-use crate::{string_buffer, trait_app::Color, App, Controls, KeyReleaseEvent};
+use crate::{string_buffer::{self, FixedBuffer}, trait_app::Color, App, Controls, KeyReleaseEvent};
 
 pub struct Snake<const SCR_W: u32, const SCR_H: u32, const MAX_LEN: usize, D, C>
 where
@@ -131,18 +131,11 @@ where
         self.close_request.update(controls.buttons_b);
 
         // Time gate
-        const MIN_UPDATE_DT_US: i64 = 30 * 1000; // 100 ms
+        const MIN_UPDATE_DT_US: i64 = 60 * 1000; // 100 ms
         if t - self.last_update < MIN_UPDATE_DT_US {
             return;
         }
         self.last_update = t;
-
-        self.time += dt as i32;
-        const TIME_BETWEEN_UPDATE: i32 = 90;
-        if self.time < TIME_BETWEEN_UPDATE {
-            return;
-        }
-        self.time -= TIME_BETWEEN_UPDATE;
 
         // Handle input for direction
         if controls.dpad_up && self.dir != Direction::Down {
@@ -171,19 +164,19 @@ where
 
     fn render(&mut self, target: &mut Self::Target) {
         // Draw some stats
-        let mut global_buffer = string_buffer::get_global_buffer();
+        let mut text_buffer = FixedBuffer::<32>::new();
         let gray = C::BLUE; // 0x404040.try_into().unwrap();
         let score_style = MonoTextStyle::new(&FONT_6X9, gray);
 
-        global_buffer.clear();
-        let _ = write!(&mut *global_buffer, "Len: {}", self.body.len());
+        text_buffer.clear();
+        let _ = write!(&mut text_buffer, "Len: {}", self.body.len());
         let _score =
-            Text::new(global_buffer.as_str(), Point::new(10, 10), score_style).draw(target);
+            Text::new(text_buffer.as_str(), Point::new(10, 10), score_style).draw(target);
 
         // Draw the snake
-        let snake_style_head = PrimitiveStyle::with_fill(C::WHITE);
-        let snake_style_pri = PrimitiveStyle::with_fill(C::GREEN);
-        let snake_style_sec = PrimitiveStyle::with_fill(C::YELLOW);
+        let snake_style_head = PrimitiveStyle::with_fill(C::CSS_GRAY);
+        let snake_style_pri = PrimitiveStyle::with_fill(C::CSS_GREEN_YELLOW);
+        let snake_style_sec = PrimitiveStyle::with_fill(C::GREEN);
         for (i, &segment) in self.body.iter().enumerate() {
             let style = match i {
                 0 => snake_style_head,

@@ -19,9 +19,14 @@ where
     C: Color,
 {
     messages: [&'static str; N],
-    current_index: usize,
-    offset: i32,
-    velocity: i32,
+    index_current: usize,
+    index_next: usize,
+
+    line_buffer: [char; 32*2], // TODO: Make 32 (width) a const generic 
+    line_buffer_offset: usize,
+
+    // offset_next: i32,
+    // velocity: i32,
     _marker: PhantomData<D>,
 }
 
@@ -33,9 +38,12 @@ where
     pub const fn new(messages: [&'static str; N]) -> Self {
         Self {
             messages,
-            current_index: random::random::<N>(),
-            offset: 0,
-            velocity: 2,
+            index_current: random::random::<N>(),
+            index_next: random::random::<N>(),
+
+            line_buffer: [' '; 32*2],
+            line_buffer_offset: 0,
+
             _marker: PhantomData,
         }
     }
@@ -50,8 +58,7 @@ where
     type Color = C;
 
     fn reset_state(&mut self) {
-        self.current_index = random::random::<N>();
-        self.offset = 0;
+        // self.index_current = random::random::<N>();
     }
 
     fn update(&mut self, dt_us: i64, _t_us: i64, _controls: &Controls) {
@@ -59,7 +66,7 @@ where
 
         if self.offset < -((self.messages[self.current_index].len() as i32) * 6) {
             self.current_index = random::random::<N>();
-            self.offset = 128; // Reset position to screen width
+            self.offset = 32; // Reset position to screen width
         }
     }
 

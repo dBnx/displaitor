@@ -44,7 +44,7 @@ use embedded_graphics::{
     text::{Baseline, Text},
 };
 
-use crate::{string_buffer, trait_app::Color, App, Controls, KeyReleaseEvent};
+use crate::{string_buffer::{self, FixedBuffer}, trait_app::Color, App, Controls, KeyReleaseEvent};
 
 pub struct MenuEntry<D, C>
 where
@@ -169,7 +169,7 @@ where
 
         let text_style = MonoTextStyle::new(&FONT_6X10, C::WHITE);
         let text_style_active = MonoTextStyle::new(&FONT_6X10, C::MAGENTA);
-        let mut buffer = string_buffer::get_global_buffer();
+        let mut buffer = FixedBuffer::<32>::new();
         for (i, entry) in self.entries.iter().enumerate() {
             buffer.clear();
 

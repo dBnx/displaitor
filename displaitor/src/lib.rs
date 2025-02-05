@@ -11,7 +11,7 @@ pub mod string_buffer;
 mod trait_app;
 
 use alloc::boxed::Box;
-use apps::{Menu, ScrollingText};
+use apps::{Menu};
 pub use controls::Controls;
 use embedded_graphics::prelude::{DrawTarget, PixelColor, RgbColor};
 pub(crate) use key_release::KeyReleaseEvent;
@@ -24,12 +24,12 @@ pub mod apps {
     mod app_dummy;
     mod app_image;
     mod app_menu;
-    mod app_scrolling_text;
+    // mod app_scrolling_text;
     pub use app_animation::Animation;
     pub use app_dummy::Dummy;
     pub use app_image::Image;
     pub use app_menu::{Menu, MenuEntry};
-    pub use app_scrolling_text::ScrollingText;
+    // pub use app_scrolling_text::ScrollingText;
 }
 
 pub mod games {
@@ -43,7 +43,7 @@ pub mod games {
     pub use app_space_invader::SpaceInvader;
 }
 
-pub fn main_app<D, C>() -> impl App<Target = D, Color = C>
+pub fn main_app<'a, D, C>() -> impl App<Target = D, Color = C>
 where
     D: DrawTarget<Color = C> + 'static,
     // C: PixelColor + RgbColor + 'static

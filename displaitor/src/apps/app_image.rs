@@ -16,7 +16,7 @@ use crate::{trait_app::Color, App, Controls, KeyReleaseEvent};
 pub struct Image<D, C>
 where
     D: DrawTarget<Color = C>,
-    C: PixelColor + RgbColor,
+    C: Color,
 {
     image: Qoi<'static>,
     close_request: KeyReleaseEvent,
@@ -26,7 +26,7 @@ where
 impl<D, C> Image<D, C>
 where
     D: DrawTarget<Color = C>,
-    C: PixelColor + RgbColor,
+    C: Color,
 {
     // TODO: Should take a const filepath of a .qoi
     pub fn new(qoi_data: &'static [u8]) -> Self {

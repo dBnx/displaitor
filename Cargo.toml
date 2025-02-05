@@ -2,6 +2,7 @@
 members = [
     "aitos",
     "displaitor",
+    "simulaitor",
 ]
 resolver = "2"
 

@@ -7,6 +7,7 @@ use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::{PrimitiveStyle, Rectangle};
 use embedded_graphics::text::Text;
 
+use crate::string_buffer::FixedBuffer;
 use crate::trait_app::Color;
 use crate::{string_buffer, App, Controls, KeyReleaseEvent};
 
@@ -90,10 +91,10 @@ where
 
         // Update paddles based on controls
         const MOVEMENT_SPEED: i32 = 2;
-        if controls.dpad_up {
+        if controls.dpad_down {
             self.paddle1_pos = (self.paddle1_pos - MOVEMENT_SPEED).max(0);
         }
-        if controls.dpad_down {
+        if controls.dpad_up {
             self.paddle1_pos =
                 (self.paddle1_pos + MOVEMENT_SPEED).min(self.screen_height - self.paddle_height);
         }
@@ -165,21 +166,21 @@ where
         .draw(target);
 
         // Display scores
-        let mut global_buffer = string_buffer::get_global_buffer();
+        let mut text_buffer = FixedBuffer::<32>::new();
 
         // - Score 1
-        global_buffer.clear();
-        let _ = write!(&mut *global_buffer, "P1: {}", self.score1);
+        text_buffer.clear();
+        let _ = write!(&mut text_buffer, "P1: {}", self.score1);
         let score_style = MonoTextStyle::new(&FONT_6X9, color1);
         let _score =
-            Text::new(global_buffer.as_str(), Point::new(10, 10), score_style).draw(target);
+            Text::new(text_buffer.as_str(), Point::new(10, 10), score_style).draw(target);
 
         // - Score 2
-        global_buffer.clear();
-        let _ = write!(&mut *global_buffer, "P2: {}", self.score2);
+        text_buffer.clear();
+        let _ = write!(&mut text_buffer, "P2: {}", self.score2);
         let score_style = MonoTextStyle::new(&FONT_6X9, color2);
         let _score =
-            Text::new(global_buffer.as_str(), Point::new(10, 20), score_style).draw(target);
+            Text::new(text_buffer.as_str(), Point::new(10, 20), score_style).draw(target);
 
         // Draw the ball
         let _ball = Rectangle::new(

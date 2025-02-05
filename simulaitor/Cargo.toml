@@ -1,0 +1,13 @@
+[package]
+name = "simulaitor"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+embedded-error-chain = {workspace = true}
+embedded-graphics = {workspace = true}
+embedded-graphics-simulator = "0.7"
+
+anyhow = "^1.0"
+
+displaitor = {path = "../displaitor"}
