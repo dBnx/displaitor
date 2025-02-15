@@ -48,7 +48,7 @@ where
             paddle1_pos: screen_height as i32 / 2 - 20,
             paddle2_pos: screen_height as i32 / 2 - 20,
             paddle_height: 10,
-            paddle_width: 2,
+            paddle_width: 3,
             ball_size: 3,
             screen_width: screen_width as i32,
             screen_height: screen_height as i32,
@@ -78,16 +78,16 @@ where
         self.close_request.reset();
     }
 
-    fn update(&mut self, dt: i64, t: i64, controls: &Controls) {
+    fn update(&mut self, dt_us: i64, t_us: i64, controls: &Controls) {
         // Kill game with 'B'
         self.close_request.update(controls.buttons_b);
 
         // Time gate
-        const MIN_UPDATE_DT_US: i64 = 15 * 1000; // 100 ms
-        if t - self.last_update < MIN_UPDATE_DT_US {
+        const MIN_UPDATE_DT_US: i64 = 20 * 1000; // 20 ms
+        if t_us - self.last_update < MIN_UPDATE_DT_US {
             return;
         }
-        self.last_update = t;
+        self.last_update = t_us;
 
         // Update paddles based on controls
         const MOVEMENT_SPEED: i32 = 2;

@@ -1,6 +1,7 @@
 #![allow(unused)]
 #![no_std]
 #![feature(iter_collect_into)]
+#![feature(generic_arg_infer)]
 
 #[macro_use]
 extern crate alloc;
@@ -24,12 +25,14 @@ pub mod apps {
     mod app_dummy;
     mod app_image;
     mod app_menu;
-    // mod app_scrolling_text;
+    mod app_scrolling_text;
+    mod app_splashscreen;
     pub use app_animation::Animation;
     pub use app_dummy::Dummy;
     pub use app_image::Image;
     pub use app_menu::{Menu, MenuEntry};
-    // pub use app_scrolling_text::ScrollingText;
+    pub use app_scrolling_text::ScrollingText;
+    pub use app_splashscreen::SplashScreen;
 }
 
 pub mod games {
@@ -43,12 +46,34 @@ pub mod games {
     pub use app_space_invader::SpaceInvader;
 }
 
+pub fn startup_app<'a, D, C>() -> impl App<Target = D, Color = C>
+where
+    D: DrawTarget<Color = C> + 'static,
+    // C: PixelColor + RgbColor + 'static
+    C: Color + 'static,
+{
+    apps::SplashScreen::new([
+        include_bytes!("../assets/MicroRascon.qoi"),
+        include_bytes!("../assets/MicroRascon_Text.qoi"),
+    ])
+}
+
 pub fn main_app<'a, D, C>() -> impl App<Target = D, Color = C>
 where
     D: DrawTarget<Color = C> + 'static,
     // C: PixelColor + RgbColor + 'static
     C: Color + 'static,
 {
+    let games_menu = apps::Menu::new([
+        apps::MenuEntry {
+            name: "Pong",
+            app: Box::new(games::Pong::<D, C>::new(64, 32)),
+        },
+        apps::MenuEntry {
+            name: "Schnek",
+            app: Box::new(games::Snake::<64, 32, 32, D, C>::new()),
+        },
+    ]);
     let animation_menu = apps::Menu::new([
         apps::MenuEntry {
             name: "Ferd",
@@ -81,22 +106,24 @@ where
         },
     ]);
 
-    let m = apps::Menu::new([
+    let scrolling: apps::ScrollingText<D, C, _> = apps::ScrollingText::new(const_str::split!(include_str!("../assets/names.txt"), "\n"));
+
+    let mut m = apps::Menu::new([
         apps::MenuEntry {
-            name: "Pong",
-            app: Box::new(games::Pong::<D, C>::new(64, 32)),
+            name: "<3",
+            app: Box::new(scrolling),
         },
         apps::MenuEntry {
-            name: "Schnek",
-            app: Box::new(games::Snake::<64, 32, 32, D, C>::new()),
+            name: "Games",
+            app: Box::new(games_menu),
         },
         apps::MenuEntry {
             name: "Imagine!",
             app: Box::new(animation_menu),
         },
     ]);
+    let _ = m.pre_select_entry(0);
     m
-    // ScrollingText::new(const_str::split!(include_str!("../assets/names.txt"), "\n"))
 }
 
 fn add(left: u64, right: u64) -> u64 {

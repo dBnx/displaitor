@@ -8,6 +8,7 @@ use embedded_graphics::{
     text::Text,
 };
 use heapless::Vec;
+use tinyrand::{Rand, Seeded, StdRand};
 
 use crate::{string_buffer::{self, FixedBuffer}, trait_app::Color, App, Controls, KeyReleaseEvent};
 
@@ -21,10 +22,13 @@ where
     food: Option<Point>,
     grow: bool,
 
+    prng: StdRand,
+
     dead: bool,
     close_request: KeyReleaseEvent,
     time: i32,
     last_update: i64,
+
     _marker: PhantomData<D>,
 }
 
@@ -43,6 +47,7 @@ where
     C: PixelColor + RgbColor,
 {
     pub fn new() -> Self {
+        let mut prng = StdRand::seed(0xDEAD_BEEF); 
         let mut body = Vec::new();
         body.push(Point::new(SCR_W as i32 / 2, SCR_H as i32 / 2))
             .unwrap(); // Start with one segment
@@ -50,18 +55,21 @@ where
         Self {
             body,
             dir: Direction::Right,
-            food: Some(random_position::<SCR_W, SCR_H>()),
+            food: Some(random_position::<SCR_W, SCR_H>(&mut prng)),
             grow: false,
+
             time: 0,
+            prng,
             dead: false,
             close_request: KeyReleaseEvent::new(),
             last_update: 0,
+
             _marker: Default::default(),
         }
     }
 
     fn spawn_food(&mut self) {
-        self.food = Some(random_position::<SCR_W, SCR_H>());
+        self.food = Some(random_position::<SCR_W, SCR_H>(&mut self.prng));
     }
 
     fn move_snake(&mut self) {
@@ -117,7 +125,7 @@ where
             .unwrap(); // Start with one segment
 
         self.body = body;
-        self.food = Some(random_position::<SCR_W, SCR_H>());
+        self.food = Some(random_position::<SCR_W, SCR_H>(&mut self.prng));
         self.dir = Direction::Right;
         self.grow = false;
 
@@ -130,14 +138,6 @@ where
         // Kill game with 'B'
         self.close_request.update(controls.buttons_b);
 
-        // Time gate
-        const MIN_UPDATE_DT_US: i64 = 60 * 1000; // 100 ms
-        if t - self.last_update < MIN_UPDATE_DT_US {
-            return;
-        }
-        self.last_update = t;
-
-        // Handle input for direction
         if controls.dpad_up && self.dir != Direction::Down {
             self.dir = Direction::Up;
         } else if controls.dpad_down && self.dir != Direction::Up {
@@ -147,6 +147,13 @@ where
         } else if controls.dpad_right && self.dir != Direction::Left {
             self.dir = Direction::Right;
         }
+
+        // Time gate
+        const MIN_UPDATE_DT_US: i64 = 60 * 1000; // 100 ms
+        if t - self.last_update < MIN_UPDATE_DT_US {
+            return;
+        }
+        self.last_update = t;
 
         // Move the snake
         self.move_snake();
@@ -197,21 +204,15 @@ where
         }
     }
 
-    fn teardown(&mut self) {
-        // TODO
-    }
+    fn teardown(&mut self) { }
 
     fn close_request(&self) -> bool {
         self.close_request.fired()
     }
 }
 
-fn random_position<const SCR_W: u32, const SCR_H: u32>() -> Point {
-    // TODO: Make them a little bit more random :)
-    let x = (SCR_H / 3) as i32;
-    let y = (SCR_W / 3) as i32;
-    Point {
-        x: SCR_W as i32 / 3,
-        y: SCR_H as i32 / 3,
-    }
+fn random_position<const SCR_W: u32, const SCR_H: u32>(prng: &mut StdRand) -> Point {
+    let x = prng.next_lim_u32(SCR_H) as i32;
+    let y = prng.next_lim_u32(SCR_W) as i32;
+    Point {x, y}
 }

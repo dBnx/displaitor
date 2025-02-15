@@ -45,6 +45,7 @@ where
     let mut controls = Controls {
         buttons_a: false,
         buttons_b: false,
+        buttons_s: false,
         dpad_up: false,
         dpad_down: false,
         dpad_left: false,
@@ -81,6 +82,7 @@ where
                     Keycode::D => controls.dpad_right = false,
                     Keycode::Space => controls.buttons_a = false,
                     Keycode::Q => controls.buttons_b = false,
+                    Keycode::R => controls.buttons_s = false,
                     _ => {}
                 },
                 SimulatorEvent::KeyDown { keycode, .. } => match keycode {
@@ -90,6 +92,7 @@ where
                     Keycode::D => controls.dpad_right = true,
                     Keycode::Space => controls.buttons_a = true,
                     Keycode::Q => controls.buttons_b = true,
+                    Keycode::R => controls.buttons_s = true,
                     _ => {}
                 },
                 _ => {}
@@ -98,7 +101,7 @@ where
 
         // Wait for the next frame
         // timer.wait();
-        sleep(Duration::from_millis(15));
+        sleep(Duration::from_millis(10));
     }
 
     // Cleanup

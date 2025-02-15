@@ -67,6 +67,7 @@ where
     nav_up_request: KeyReleaseEvent,
     nav_down_request: KeyReleaseEvent,
     selection_request: KeyReleaseEvent,
+    special_request: KeyReleaseEvent,
     close_request: KeyReleaseEvent,
 }
 
@@ -84,7 +85,18 @@ where
             nav_up_request: KeyReleaseEvent::new(),
             nav_down_request: KeyReleaseEvent::new(),
             selection_request: KeyReleaseEvent::new(),
+            special_request: KeyReleaseEvent::new(),
             close_request: KeyReleaseEvent::new(),
+        }
+    }
+
+    pub fn pre_select_entry(&mut self, index: usize) -> bool {
+        if index < MAX_ENTRIES {
+            self.selected_index = index;
+            self.active_index = Some(index);
+            true
+        } else {
+            false
         }
     }
 
@@ -144,6 +156,7 @@ where
         self.nav_up_request.reset();
         self.nav_down_request.reset();
         self.selection_request.reset();
+        self.special_request.reset();
         self.close_request.reset();
     }
 
@@ -153,10 +166,11 @@ where
         }
 
         // We are in the menu itself and don't delegate the call!
-        self.close_request.update(controls.buttons_b);
         self.nav_up_request.update(controls.dpad_up);
         self.nav_down_request.update(controls.dpad_down);
         self.selection_request.update(controls.buttons_a);
+        self.special_request.update(controls.buttons_s);
+        self.close_request.update(controls.buttons_b);
 
         self.update_process_menu_movement(controls);
     }
@@ -189,6 +203,19 @@ where
             )
             .draw(target);
         }
+
+        if self.special_request.fired() {
+            // Remove this
+            let _special_test = Text::with_baseline(
+                "SPECIAL!",
+                Point::new(2, 10),
+                text_style_active,
+                Baseline::Top,
+            )
+            .draw(target);
+            
+        }
+
     }
 
     fn teardown(&mut self) {
