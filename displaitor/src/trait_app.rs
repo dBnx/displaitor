@@ -5,9 +5,6 @@ use embedded_graphics::{
 
 use crate::Controls;
 
-// TODO: update should return bool, if an update occured and render must be called. Otherwise
-// we could avoid re-rendering the frame.
-
 pub trait Color: PixelColor + RgbColor + WebColors + From<Rgb888> {}
 
 impl Color for Rgb565 {}
@@ -16,13 +13,17 @@ pub trait App {
     type Target: DrawTarget;
     type Color: Color;
 
-    // TODO: We should be able to re-init the App state.
+    /// Must always bring the app in a well-defined and re-usable state.
     fn reset_state(&mut self);
 
-    fn update(&mut self, dt_us: i64, t_us: i64, controls: &Controls);
+    /// Updates the internal state. `true` is returned, if the render would be different from the previous state.
+    /// So `false` indicates, that the previous frame can be re-used.
+    fn update(&mut self, dt_us: i64, t_us: i64, controls: &Controls) -> bool;
 
-    fn render(&mut self, target: &mut Self::Target);
+    /// Draw the current state to the screen.
+    fn render(&self, target: &mut Self::Target);
 
+    /// Could be called at any time. It is guaranteed, that `reset_sate` is called called before the app is used again.
     fn teardown(&mut self) {}
 
     /// If `true` is returned, the application wants to be closed. Calls to `render` and `update` can still happen for some time after

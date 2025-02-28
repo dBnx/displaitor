@@ -10,7 +10,11 @@ use embedded_graphics::{
 use heapless::Vec;
 use tinyrand::{Rand, Seeded, StdRand};
 
-use crate::{string_buffer::{self, FixedBuffer}, trait_app::Color, App, Controls, KeyReleaseEvent};
+use crate::{
+    string_buffer::{self, FixedBuffer},
+    trait_app::Color,
+    App, Controls, KeyReleaseEvent,
+};
 
 pub struct Snake<const SCR_W: u32, const SCR_H: u32, const MAX_LEN: usize, D, C>
 where
@@ -47,7 +51,7 @@ where
     C: PixelColor + RgbColor,
 {
     pub fn new() -> Self {
-        let mut prng = StdRand::seed(0xDEAD_BEEF); 
+        let mut prng = StdRand::seed(0xDEAD_BEEF);
         let mut body = Vec::new();
         body.push(Point::new(SCR_W as i32 / 2, SCR_H as i32 / 2))
             .unwrap(); // Start with one segment
@@ -134,7 +138,7 @@ where
         self.last_update = 0;
     }
 
-    fn update(&mut self, dt: i64, t: i64, controls: &Controls) {
+    fn update(&mut self, dt: i64, t: i64, controls: &Controls) -> bool {
         // Kill game with 'B'
         self.close_request.update(controls.buttons_b);
 
@@ -151,7 +155,7 @@ where
         // Time gate
         const MIN_UPDATE_DT_US: i64 = 60 * 1000; // 100 ms
         if t - self.last_update < MIN_UPDATE_DT_US {
-            return;
+            return false;
         }
         self.last_update = t;
 
@@ -167,9 +171,11 @@ where
         if self.food.is_none() {
             self.spawn_food();
         }
+
+        true
     }
 
-    fn render(&mut self, target: &mut Self::Target) {
+    fn render(&self, target: &mut Self::Target) {
         // Draw some stats
         let mut text_buffer = FixedBuffer::<32>::new();
         let gray = C::BLUE; // 0x404040.try_into().unwrap();
@@ -177,8 +183,7 @@ where
 
         text_buffer.clear();
         let _ = write!(&mut text_buffer, "Len: {}", self.body.len());
-        let _score =
-            Text::new(text_buffer.as_str(), Point::new(10, 10), score_style).draw(target);
+        let _score = Text::new(text_buffer.as_str(), Point::new(10, 10), score_style).draw(target);
 
         // Draw the snake
         let snake_style_head = PrimitiveStyle::with_fill(C::CSS_GRAY);
@@ -204,7 +209,7 @@ where
         }
     }
 
-    fn teardown(&mut self) { }
+    fn teardown(&mut self) {}
 
     fn close_request(&self) -> bool {
         self.close_request.fired()
@@ -214,5 +219,5 @@ where
 fn random_position<const SCR_W: u32, const SCR_H: u32>(prng: &mut StdRand) -> Point {
     let x = prng.next_lim_u32(SCR_H) as i32;
     let y = prng.next_lim_u32(SCR_W) as i32;
-    Point {x, y}
+    Point { x, y }
 }

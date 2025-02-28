@@ -44,7 +44,11 @@ use embedded_graphics::{
     text::{Baseline, Text},
 };
 
-use crate::{string_buffer::{self, FixedBuffer}, trait_app::Color, App, Controls, KeyReleaseEvent};
+use crate::{
+    string_buffer::{self, FixedBuffer},
+    trait_app::Color,
+    App, Controls, KeyReleaseEvent,
+};
 
 pub struct MenuEntry<D, C>
 where
@@ -114,12 +118,11 @@ where
 
     /// Delegates the update call, if something is selected and returns `true`. If the
     /// call wasn't delegated, it returns `false`.
-    fn update_process_active(&mut self, dt: i64, t: i64, controls: &Controls) -> bool {
+    fn update_process_active(&mut self, dt: i64, t: i64, controls: &Controls) -> Option<bool> {
         if let Some(active_index) = self.active_index {
             let active_app = &mut self.entries[active_index];
             if !active_app.app.close_request() {
-                active_app.app.update(dt, t, controls);
-                return true;
+                return Some(active_app.app.update(dt, t, controls));
             }
 
             // info!("App {} requested closure", active_app.name);
@@ -127,7 +130,7 @@ where
             self.active_index = None;
         }
 
-        false
+        None
     }
 
     fn update_process_menu_movement(&mut self, controls: &Controls) {
@@ -160,9 +163,9 @@ where
         self.close_request.reset();
     }
 
-    fn update(&mut self, dt: i64, t: i64, controls: &Controls) {
-        if self.update_process_active(dt, t, controls) {
-            return;
+    fn update(&mut self, dt: i64, t: i64, controls: &Controls) -> bool {
+        if let Some(update) = self.update_process_active(dt, t, controls) {
+            return update;
         }
 
         // We are in the menu itself and don't delegate the call!
@@ -173,9 +176,10 @@ where
         self.close_request.update(controls.buttons_b);
 
         self.update_process_menu_movement(controls);
+        true
     }
 
-    fn render(&mut self, target: &mut D) {
+    fn render(&self, target: &mut D) {
         if let Some(active_index) = self.active_index {
             self.entries[active_index].app.render(target);
             return;
@@ -213,9 +217,7 @@ where
                 Baseline::Top,
             )
             .draw(target);
-            
         }
-
     }
 
     fn teardown(&mut self) {

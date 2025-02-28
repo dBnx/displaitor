@@ -78,14 +78,14 @@ where
         self.close_request.reset();
     }
 
-    fn update(&mut self, dt_us: i64, t_us: i64, controls: &Controls) {
+    fn update(&mut self, dt_us: i64, t_us: i64, controls: &Controls) -> bool {
         // Kill game with 'B'
         self.close_request.update(controls.buttons_b);
 
         // Time gate
         const MIN_UPDATE_DT_US: i64 = 20 * 1000; // 20 ms
         if t_us - self.last_update < MIN_UPDATE_DT_US {
-            return;
+            return false;
         }
         self.last_update = t_us;
 
@@ -137,9 +137,11 @@ where
         } else if self.ball_pos.y < self.paddle2_pos + self.paddle_height / 2 {
             self.paddle2_pos = (self.paddle2_pos - 2).max(0);
         }
+
+        true
     }
 
-    fn render(&mut self, target: &mut Self::Target) {
+    fn render(&self, target: &mut Self::Target) {
         // Clear the screen
         let _background = Rectangle::new(
             Point::zero(),
@@ -172,15 +174,13 @@ where
         text_buffer.clear();
         let _ = write!(&mut text_buffer, "P1: {}", self.score1);
         let score_style = MonoTextStyle::new(&FONT_6X9, color1);
-        let _score =
-            Text::new(text_buffer.as_str(), Point::new(10, 10), score_style).draw(target);
+        let _score = Text::new(text_buffer.as_str(), Point::new(10, 10), score_style).draw(target);
 
         // - Score 2
         text_buffer.clear();
         let _ = write!(&mut text_buffer, "P2: {}", self.score2);
         let score_style = MonoTextStyle::new(&FONT_6X9, color2);
-        let _score =
-            Text::new(text_buffer.as_str(), Point::new(10, 20), score_style).draw(target);
+        let _score = Text::new(text_buffer.as_str(), Point::new(10, 20), score_style).draw(target);
 
         // Draw the ball
         let _ball = Rectangle::new(

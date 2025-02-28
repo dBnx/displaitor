@@ -66,21 +66,21 @@ where
         self.time_over = false;
     }
 
-    fn update(&mut self, dt: i64, t_us: i64, controls: &Controls) {
+    fn update(&mut self, dt: i64, t_us: i64, controls: &Controls) -> bool{
         self.close_request.update(controls.buttons_b);
         self.last_time_us = t_us;
         self.current_frame = if t_us < self.close_after_us / 2 { 0 } else { 1 };
         if t_us > self.close_after_us {
             self.time_over = true;
         }
+        true 
     }
 
-    fn render(&mut self, target: &mut Self::Target) {
+    fn render(&self, target: &mut Self::Target) {
         let mut target_rgb888: ColorConverted<'_, _, Rgb888> = target.color_converted();
 
-
         let image = &self.image[self.current_frame];
-        let _img = embedded_graphics::image::Image::with_center(image, Point::new(32,16))
+        let _img = embedded_graphics::image::Image::with_center(image, Point::new(32, 16))
             .draw(&mut target_rgb888);
     }
 

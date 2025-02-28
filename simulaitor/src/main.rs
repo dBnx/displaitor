@@ -21,10 +21,7 @@ pub fn run_app<T>(app: &mut T)
 where
     T: App<Target = SimulatorDisplay<Rgb565>, Color = Rgb565>,
 {
-    // Create a simulated display with a resolution of 240x240 pixels
     let mut display = SimulatorDisplay::<Rgb565>::new(Size::new(SCREEN_WIDTH, SCREEN_HEIGHT));
-
-    // Create a window for rendering the display
     let output_settings = OutputSettingsBuilder::new()
         // .theme(BinaryColorTheme::OledBlue)
         .scale(4)

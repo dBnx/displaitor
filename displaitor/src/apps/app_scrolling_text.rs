@@ -1,12 +1,11 @@
-
 use core::marker::PhantomData;
 use embedded_graphics::prelude::*;
 // use embedded_graphics::mono_font::{ascii::FONT_6X10, MonoTextStyle};
-use embedded_graphics::mono_font::MonoTextStyle;
-use embedded_graphics::text::{Baseline, Text};
-use embedded_graphics::pixelcolor::{Rgb888, Rgb565};
-use tinyrand::{Rand, StdRand, Seeded};
 use crate::{App, Color, Controls, KeyReleaseEvent};
+use embedded_graphics::mono_font::MonoTextStyle;
+use embedded_graphics::pixelcolor::{Rgb565, Rgb888};
+use embedded_graphics::text::{Baseline, Text};
+use tinyrand::{Rand, Seeded, StdRand};
 
 // NOTE: Font settings
 // - FONT_6X10  Great if the top / bottom should also be used.
@@ -59,9 +58,9 @@ where
     /// - The PRNG is seeded with a fixed value (change as needed).
     /// - The current and next message indices (and colors) are chosen at random.
     pub fn new(messages: [&'static str; N]) -> Self {
-        let mut prng = StdRand::seed(0xDEAD_BEEF); 
+        let mut prng = StdRand::seed(0xDEAD_BEEF);
         let index_current = prng.next_lim_usize(N);
-        let index_next = prng.next_lim_usize( N);
+        let index_next = prng.next_lim_usize(N);
         // Generate random colors. We assume that rand() returns a u32.
         let current_color = get_random_color(&mut prng);
         let next_color = get_random_color(&mut prng);
@@ -81,7 +80,6 @@ where
             _marker: PhantomData,
         }
     }
-
 }
 
 impl<D, C, const N: usize> App for ScrollingText<D, C, N>
@@ -102,13 +100,13 @@ where
         self.close_request.reset();
     }
 
-    fn update(&mut self, _dt_us: i64, t_us: i64, controls: &Controls) {
+    fn update(&mut self, _dt_us: i64, t_us: i64, controls: &Controls) -> bool {
         self.close_request.update(controls.buttons_b);
 
         // Time gate
         const MIN_UPDATE_DT_US: i64 = 30_000;
         if t_us - self.last_update < MIN_UPDATE_DT_US {
-            return;
+            return false;
         }
         self.last_update = t_us;
 
@@ -127,9 +125,11 @@ where
             self.index_next = self.prng.next_lim_usize(N);
             self.next_color = get_random_color(&mut self.prng);
         }
+
+        true
     }
 
-    fn render(&mut self, target: &mut Self::Target) {
+    fn render(&self, target: &mut Self::Target) {
         // Create text styles for current and next messages.
         let style_current = MonoTextStyle::new(&FONT, self.current_color);
         let style_next = MonoTextStyle::new(&FONT, self.next_color);
@@ -138,14 +138,24 @@ where
         // The current message is drawn shifted left by `line_buffer_offset` pixels.
         let x_offset = -(self.line_buffer_offset as i32);
         // Draw the current message.
-        let _ = Text::with_baseline(current, Point::new(x_offset, FONT_VERT_OFFSET), style_current, Baseline::Top)
-            .draw(target);
+        let _ = Text::with_baseline(
+            current,
+            Point::new(x_offset, FONT_VERT_OFFSET),
+            style_current,
+            Baseline::Top,
+        )
+        .draw(target);
         // Compute the pixel width of the current message.
         let current_width = current.len() as i32 * FONT_WIDTH;
         // The next message is drawn immediately after the current one.
         let next_x_offset = x_offset + current_width;
-        let _ = Text::with_baseline(next, Point::new(next_x_offset, FONT_VERT_OFFSET), style_next, Baseline::Top)
-            .draw(target);
+        let _ = Text::with_baseline(
+            next,
+            Point::new(next_x_offset, FONT_VERT_OFFSET),
+            style_next,
+            Baseline::Top,
+        )
+        .draw(target);
     }
 
     fn teardown(&mut self) {}

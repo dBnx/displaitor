@@ -50,11 +50,12 @@ where
         self.close_request.reset();
     }
 
-    fn update(&mut self, dt: i64, _t: i64, controls: &Controls) {
+    fn update(&mut self, dt: i64, _t: i64, controls: &Controls) -> bool {
         self.close_request.update(controls.buttons_b);
+        true // TODO: false after the first time
     }
 
-    fn render(&mut self, target: &mut Self::Target) {
+    fn render(&self, target: &mut Self::Target) {
         let mut target_rgb888: ColorConverted<'_, _, Rgb888> = target.color_converted();
 
         let _img = embedded_graphics::image::Image::new(&self.image, Point::zero())

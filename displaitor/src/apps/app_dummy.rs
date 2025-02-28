@@ -39,9 +39,9 @@ where
 
     fn reset_state(&mut self) {}
 
-    fn update(&mut self, dt: i64, _t: i64, controls: &Controls) {}
+    fn update(&mut self, dt: i64, _t: i64, controls: &Controls) -> bool {true}
 
-    fn render(&mut self, target: &mut Self::Target) {}
+    fn render(& self, target: &mut Self::Target) {}
 
     fn teardown(&mut self) {}
 

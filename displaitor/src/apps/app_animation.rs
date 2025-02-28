@@ -58,17 +58,20 @@ where
         self.close_request.reset();
     }
 
-    fn update(&mut self, dt: i64, t: i64, controls: &Controls) {
+    fn update(&mut self, dt: i64, t: i64, controls: &Controls) -> bool {
         self.close_request.update(controls.buttons_b);
 
         if t - self.current_frame_time > 50_000 {
             self.current_frame_time = t;
             self.current_frame_index += 1;
             self.current_frame_index %= N;
+            true
+        } else {
+            true // TODO: false after first render
         }
     }
 
-    fn render(&mut self, target: &mut Self::Target) {
+    fn render(&self, target: &mut Self::Target) {
         let mut target_rgb888: ColorConverted<'_, _, Rgb888> = target.color_converted();
 
         let current_frame = &self.images[self.current_frame_index];
