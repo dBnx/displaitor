@@ -4,12 +4,13 @@
 #![feature(generic_const_exprs)]
 #![allow(incomplete_features)]
 #![allow(static_mut_refs)]
+#![allow(unused_imports)] // TODO: Remove in the future
 
 mod monitor;
 
 use alloc::boxed::Box;
 use cortex_m::interrupt::Mutex;
-use defmt::{debug, info};
+use defmt::{debug, info, warn};
 // use defmt::*;
 use defmt_rtt as _;
 use displaitor::App;
@@ -18,7 +19,11 @@ use embedded_alloc::LlffHeap as Heap;
 use embedded_graphics::{pixelcolor::Rgb565, prelude::*};
 #[allow(unused_imports)]
 use embedded_hal::digital::v2::{InputPin, OutputPin, ToggleableOutputPin};
+use embedded_hal::{PwmPin};
 use hub75_pio::{self, dma::DMAExt, lut::GammaLut};
+use qoa_decoder::QoaDecoder;
+use rp2040_hal::gpio::{self, DynFunction, DynPinId, Function, FunctionPwm, Pin};
+use rp2040_hal::pwm;
 use rp2040_hal::{gpio::PullNone, pio::PIOExt, Timer, multicore};
 
 use panic_probe as _;
@@ -37,6 +42,11 @@ extern crate alloc;
 const COLOR_DEPTH: usize = 10;
 static mut DISPLAY_BUFFER: hub75_pio::DisplayMemory<64, 32, COLOR_DEPTH> =
     hub75_pio::DisplayMemory::new();
+
+// type AudioPwm = Pin<DynPinId, FunctionPwm, PullNone>;
+// type AudioPwm = rp2040_hal::pwm::Channel<rp2040_hal::pwm::Slice<rp2040_hal::pwm::Pwm0, rp2040_hal::pwm::FreeRunning>, rp2040_hal::pwm::A>;
+// type AudioPwm = rp2040_hal::pwm::Channel<>;
+// static mut PWM_AUDIO_CHANNEL: Option<&'static mut AudioPwm> = None;
 
 #[entry]
 fn main() -> ! {
@@ -165,7 +175,57 @@ fn main() -> ! {
     let pin_button_b = pins.gpio17.into_pull_up_input();
     let _pin_button_s = pins.gpio16.into_pull_up_input();
     */
-    let mut pin_led = pins.gpio27.into_push_pull_output();
+    // let mut pwm = Pwm::new(pac.PWM, &mut pac.RESETS);
+
+    // --------------- PWM --------------------
+    /*
+    // Initialize PWM peripheral
+    let mut pwm_slices = rp2040_hal::pwm::Slices::new(pac.PWM, &mut resets);
+    let pwm_slice = &mut pwm_slices.pwm0;
+    pwm_slice.set_div_int(125);
+    pwm_slice.enable();
+    let pwm_channel = &mut pwm_slice.channel_a;
+    pwm_channel.enable();
+
+    // Prepare pin
+    let mut _pin_audio_pwm = pins.gpio27.into_pull_type::<PullNone>().into_function::<FunctionPwm>().into_dyn_pin();
+
+    // Bind the dynamic pin to the PWM channel
+    // let mut dyn_pwm_channel = pwm_channel. .bind_to_dyn_pin(&mut pin_audio_pwm);
+
+
+    unsafe {
+        PWM_AUDIO_CHANNEL = Some(pwm_channel);
+        // Memory barriers: Ensure explicit accesses are complete & ensure memory access ordering
+        cortex_m::asm::dsb();
+        cortex_m::asm::dmb();
+    }
+    */
+    // Init PWM
+    unsafe {
+        // Write the PWM slices into the static. This makes them 'static.
+        PWM_SLICES.write(pwm::Slices::new(pac.PWM, &mut resets));
+        let pwm_slices = PWM_SLICES.assume_init_mut();
+
+        // Select the PWM slice corresponding to your pin (for example, slice0).
+        let pwm_slice = &mut pwm_slices.pwm5;
+        pwm_slice.set_div_int(1);
+        pwm_slice.set_div_frac(0);
+        pwm_slice.set_top(255); // Affects frequency!
+        pwm_slice.enable();
+       
+        warn!("PWM: Max duty cycle: {}",  pwm_slice.channel_b.get_max_duty());
+
+        // Store a reference to the channel in the global static.
+        PWM_AUDIO_CHANNEL = Some(&mut pwm_slice.channel_b);
+    }
+    // Prepare pin
+    // GPIO27 is connected to PWM channel 5B
+    let mut _pin_audio_pwm = pins.gpio27.into_pull_type::<PullNone>().into_function::<FunctionPwm>().into_dyn_pin();
+
+    // --------------- MISC --------------------
+    // let mut pin_led = pins.gpio27.into_push_pull_output();
+    let mut pin_led = pins.gpio28.into_push_pull_output();
     let mut pin_ce_led_pwr = pins.gpio22.into_push_pull_output();
     let mut pin_ce_lvl_shft = pins.gpio19.into_push_pull_output();
     let _pin_i2c_pdc_sda = pins.gpio20.into_floating_input();
@@ -175,6 +235,7 @@ fn main() -> ! {
         lut.init((1.0, 1.0, 1.0))
     }
 
+    // --------------- Control --------------------
     let pin_dpad_u = pins.gpio16.into_pull_up_input();
     let pin_dpad_d = pins.gpio17.into_pull_up_input();
     let pin_dpad_l = pins.b_power_save.into_pull_up_input();
@@ -249,6 +310,7 @@ fn main() -> ! {
 
 
     // let mut app = Mutex::new(app);
+    // let app_copy = app.borrow(|app| app.clone());
     info!("Start loop");
     loop {
         pin_led.set_high().unwrap(); // High ~ Update phase
@@ -279,11 +341,74 @@ fn main() -> ! {
     }
 }
 
+use core::mem::MaybeUninit;
+
+type AudioPwm = pwm::Channel<pwm::Slice<pwm::Pwm5, pwm::FreeRunning>, pwm::B>;
+static mut PWM_SLICES: MaybeUninit<pwm::Slices> = MaybeUninit::uninit();
+static mut PWM_AUDIO_CHANNEL: Option<&'static mut AudioPwm> = None;
+
+// fn init_pwm(pac: rp2040_hal::pac::Peripherals, resets: &mut rp2040_hal::pac::RESETS) {
+// }
+
+
+// mod qoa;
+// pub use qoa::QoaDecoder;
+
 fn core1_task() -> () {
+
+    while unsafe { PWM_AUDIO_CHANNEL.is_none()} {
+        cortex_m::asm::dmb();
+    }
+
+    let audio_pin = unsafe { PWM_AUDIO_CHANNEL.take().expect("PWM pin initialized") };
+
+    play_audio(audio_pin);
+    // loop {
+    //     cortex_m::asm::wfi();
+    // }
+}
+
+
+/// Converts a signed 16‑bit sample (range: –32768..32767) into a PWM duty cycle (0..max_duty).
+fn sample_to_duty(sample: i16, max_duty: u16) -> u16 {
+    (((sample as i32 + 32768) as u32 * (max_duty as u32)) / 65535) as u16
+}
+
+/// Plays the embedded QOA file on the provided PWM pin. This function never returns.
+/// It uses the cortex‑m asm delay (assuming a 125 MHz clock) to wait for the sample period.
+pub fn play_audio<P>(pwm: &mut P) -> !
+where
+    P: PwmPin<Duty = u16>,
+{
+    // Embed the QOA file at compile time.
+    // let qoa_data: &'static [u8] = include_bytes!("../../displaitor/assets/Haindling.qoa");
+    // let qoa_data: &'static [u8] = include_bytes!("../../Haindling.qoa");
+    // let qoa_data: &'static [u8] = include_bytes!("../../sine_wave.qoa");
+    let qoa_data: &'static [u8] = include_bytes!("../../tools/Original Tetris.qoa");
+    let mut dec = QoaDecoder::<'static>::new(qoa_data).expect("Invalid QOA file");
+    
+    // Calculate delay in microseconds per sample.
+    let sample_period_us = 1_000_000 / dec.sample_rate();
+    const CYCLES_PER_US: u32 = 125; // assuming a 125 MHz clock
+
+    info!("Sample Rate: {} | Sample Period : {}us", dec.sample_rate(), sample_period_us);
+
     loop {
-        cortex_m::asm::wfi();
+        if let Some(samples) = dec.next_sample() {
+            let sample = samples; // [1]; 
+
+            let duty = sample_to_duty(sample, pwm.get_max_duty());
+            pwm.set_duty(duty);
+            // Delay for one sample period.
+            cortex_m::asm::delay(sample_period_us * CYCLES_PER_US);
+        } else {
+            warn!("EOF - Reseting audio!");
+            // Loop back to the start of the file.
+            dec.reset();
+        }
     }
 }
+
 
 #[global_allocator]
 static HEAP: Heap = Heap::empty();

@@ -15,7 +15,7 @@ panic-probe = { version = "0.3", features = ["print-defmt"] }
 
 # We're using a Pico by default on this template
 rp-pico = "0.8"
-rp2040-hal = { version = "0.9.2", features = ["rt", "critical-section-impl"] }
+rp2040-hal = { version = "0.9.2", features = ["rt", "critical-section-impl", "rom-func-cache", "defmt", "chrono"] } # , "rom-v2-intrinsics"
 
 # If you're not going to use a Board Support Package you'll need these:
 # rp2040-hal = { version="0.10", features=["rt", "critical-section-impl"] }
@@ -31,6 +31,7 @@ heapless = "0.8.0"
 # https://github.com/kjagiello/hub75-pio-rs/tree/main
 hub75-pio = { git = "https://github.com/Niedzwiedzw/hub75-rs.git", rev = "262bca716990f0c7eb54b6d6f40578498a78a505" }
 displaitor = {path = "../displaitor"}
+qoa_decoder = {path = "../qoa_decoder"}
 
 # critical-section = "1.2.0"
 # mutex-trait = "0.2.0"

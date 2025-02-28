@@ -1,7 +1,7 @@
 [workspace]
 members = [
     "aitos",
-    "displaitor",
+    "displaitor", "qoa_decoder",
     "simulaitor",
 ]
 resolver = "2"

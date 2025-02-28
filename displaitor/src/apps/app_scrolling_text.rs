@@ -1,11 +1,20 @@
 
 use core::marker::PhantomData;
 use embedded_graphics::prelude::*;
-use embedded_graphics::mono_font::{ascii::FONT_6X10, MonoTextStyle};
+// use embedded_graphics::mono_font::{ascii::FONT_6X10, MonoTextStyle};
+use embedded_graphics::mono_font::MonoTextStyle;
 use embedded_graphics::text::{Baseline, Text};
 use embedded_graphics::pixelcolor::{Rgb888, Rgb565};
 use tinyrand::{Rand, StdRand, Seeded};
 use crate::{App, Color, Controls, KeyReleaseEvent};
+
+// NOTE: Font settings
+// - FONT_6X10  Great if the top / bottom should also be used.
+// - FONT_10X20
+// use embedded_graphics::mono_font::ascii::FONT_10X20 as FONT;
+use embedded_graphics::mono_font::iso_8859_10::FONT_10X20 as FONT;
+const FONT_WIDTH: i32 = 10;
+const FONT_VERT_OFFSET: i32 = 6;
 
 /// A scrolling text application that continuously scrolls a random sentence followed immediately
 /// by another random sentence. On every update call the text is shifted one pixel to the left.
@@ -107,7 +116,7 @@ where
         self.line_buffer_offset += 1;
         // Assume each character is 6 pixels wide.
         let current_message = self.messages[self.index_current];
-        let current_width = current_message.len() as i32 * 6;
+        let current_width = current_message.len() as i32 * FONT_WIDTH;
         if self.line_buffer_offset as i32 >= current_width {
             // The current message has fully scrolled off.
             self.line_buffer_offset -= current_width as usize;
@@ -122,20 +131,20 @@ where
 
     fn render(&mut self, target: &mut Self::Target) {
         // Create text styles for current and next messages.
-        let style_current = MonoTextStyle::new(&FONT_6X10, self.current_color);
-        let style_next = MonoTextStyle::new(&FONT_6X10, self.next_color);
+        let style_current = MonoTextStyle::new(&FONT, self.current_color);
+        let style_next = MonoTextStyle::new(&FONT, self.next_color);
         let current = self.messages[self.index_current];
         let next = self.messages[self.index_next];
         // The current message is drawn shifted left by `line_buffer_offset` pixels.
         let x_offset = -(self.line_buffer_offset as i32);
         // Draw the current message.
-        let _ = Text::with_baseline(current, Point::new(x_offset, 10), style_current, Baseline::Top)
+        let _ = Text::with_baseline(current, Point::new(x_offset, FONT_VERT_OFFSET), style_current, Baseline::Top)
             .draw(target);
         // Compute the pixel width of the current message.
-        let current_width = current.len() as i32 * 6;
+        let current_width = current.len() as i32 * FONT_WIDTH;
         // The next message is drawn immediately after the current one.
         let next_x_offset = x_offset + current_width;
-        let _ = Text::with_baseline(next, Point::new(next_x_offset, 10), style_next, Baseline::Top)
+        let _ = Text::with_baseline(next, Point::new(next_x_offset, FONT_VERT_OFFSET), style_next, Baseline::Top)
             .draw(target);
     }
 

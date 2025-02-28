@@ -1,4 +1,4 @@
-use defmt::info;
+use defmt::{debug, info};
 
 
 #[derive(Default, Debug)]
@@ -27,7 +27,7 @@ impl Monitor {
         let dt_ms = dt_us / 1000;
         let fps = self.frames_rendered * 1000 / dt_ms.max(1);
 
-        info!("FPS: {:03}Hz | dt {:04}ms | frames: {:03}", fps, dt_ms, self.frames_rendered);
+        debug!("FPS: {:03}Hz | dt {:04}ms | frames: {:03}", fps, dt_ms, self.frames_rendered);
 
 
         self.frames_rendered = 0;
