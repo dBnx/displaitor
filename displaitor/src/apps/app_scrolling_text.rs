@@ -1,5 +1,6 @@
 use core::marker::PhantomData;
 use embedded_graphics::prelude::*;
+use crate::trait_app::{RenderStatus, UpdateResult};
 // use embedded_graphics::mono_font::{ascii::FONT_6X10, MonoTextStyle};
 use crate::{App, Color, Controls, KeyReleaseEvent};
 use embedded_graphics::mono_font::MonoTextStyle;
@@ -100,13 +101,13 @@ where
         self.close_request.reset();
     }
 
-    fn update(&mut self, _dt_us: i64, t_us: i64, controls: &Controls) -> bool {
+    fn update(&mut self, _dt_us: i64, t_us: i64, controls: &Controls) -> UpdateResult {
         self.close_request.update(controls.buttons_b);
 
         // Time gate
         const MIN_UPDATE_DT_US: i64 = 30_000;
         if t_us - self.last_update < MIN_UPDATE_DT_US {
-            return false;
+            return RenderStatus::NoVisibleChange.into();
         }
         self.last_update = t_us;
 
@@ -126,7 +127,7 @@ where
             self.next_color = get_random_color(&mut self.prng);
         }
 
-        true
+        RenderStatus::VisibleChange.into()
     }
 
     fn render(&self, target: &mut Self::Target) {

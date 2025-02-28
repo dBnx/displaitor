@@ -11,7 +11,10 @@ use embedded_graphics::{
 use heapless::Vec;
 use tinyqoi::Qoi;
 
-use crate::{trait_app::Color, App, Controls, KeyReleaseEvent};
+use crate::{
+    trait_app::{Color, RenderStatus, UpdateResult},
+    App, Controls, KeyReleaseEvent,
+};
 
 pub struct SplashScreen<D, C>
 where
@@ -66,14 +69,14 @@ where
         self.time_over = false;
     }
 
-    fn update(&mut self, dt: i64, t_us: i64, controls: &Controls) -> bool{
+    fn update(&mut self, dt: i64, t_us: i64, controls: &Controls) -> UpdateResult {
         self.close_request.update(controls.buttons_b);
         self.last_time_us = t_us;
         self.current_frame = if t_us < self.close_after_us / 2 { 0 } else { 1 };
         if t_us > self.close_after_us {
             self.time_over = true;
         }
-        true 
+        RenderStatus::VisibleChange.into()
     }
 
     fn render(&self, target: &mut Self::Target) {

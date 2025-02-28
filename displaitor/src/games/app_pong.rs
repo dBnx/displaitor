@@ -8,7 +8,7 @@ use embedded_graphics::primitives::{PrimitiveStyle, Rectangle};
 use embedded_graphics::text::Text;
 
 use crate::string_buffer::FixedBuffer;
-use crate::trait_app::Color;
+use crate::trait_app::{Color, RenderStatus, UpdateResult};
 use crate::{string_buffer, App, Controls, KeyReleaseEvent};
 
 // TODO: Make screen size a parameter of the App struct.
@@ -79,14 +79,14 @@ where
         self.close_request.reset();
     }
 
-    fn update(&mut self, dt_us: i64, t_us: i64, controls: &Controls) -> bool {
+    fn update(&mut self, dt_us: i64, t_us: i64, controls: &Controls) -> UpdateResult {
         // Kill game with 'B'
         self.close_request.update(controls.buttons_b);
 
         // Time gate
         const MIN_UPDATE_DT_US: i64 = 20 * 1000; // 20 ms
         if t_us - self.last_update < MIN_UPDATE_DT_US {
-            return false;
+            return RenderStatus::NoVisibleChange.into();
         }
         self.last_update = t_us;
 
@@ -139,7 +139,7 @@ where
             self.paddle2_pos = (self.paddle2_pos - 2).max(0);
         }
 
-        true
+        RenderStatus::VisibleChange.into()
     }
 
     fn render(&self, target: &mut Self::Target) {

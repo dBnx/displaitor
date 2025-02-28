@@ -4,13 +4,12 @@
 #![feature(generic_const_exprs)]
 #![allow(incomplete_features)]
 #![allow(static_mut_refs)]
-#![allow(unused_imports)] // TODO: Remove in the future
 
 mod monitor;
 
 use alloc::boxed::Box;
-use cortex_m::interrupt::Mutex;
-use defmt::{debug, info, warn};
+#[allow(unused_imports)]
+use defmt::{debug, error, info, warn};
 // use defmt::*;
 use defmt_rtt as _;
 use displaitor::App;
@@ -19,12 +18,12 @@ use embedded_alloc::LlffHeap as Heap;
 use embedded_graphics::{pixelcolor::Rgb565, prelude::*};
 #[allow(unused_imports)]
 use embedded_hal::digital::v2::{InputPin, OutputPin, ToggleableOutputPin};
-use embedded_hal::{PwmPin};
+use embedded_hal::PwmPin;
 use hub75_pio::{self, dma::DMAExt, lut::GammaLut};
 use qoa_decoder::QoaDecoder;
-use rp2040_hal::gpio::{self, DynFunction, DynPinId, Function, FunctionPwm, Pin};
+use rp2040_hal::gpio::FunctionPwm;
 use rp2040_hal::pwm;
-use rp2040_hal::{gpio::PullNone, pio::PIOExt, Timer, multicore};
+use rp2040_hal::{gpio::PullNone, multicore, pio::PIOExt, Timer};
 
 use panic_probe as _;
 
@@ -213,15 +212,22 @@ fn main() -> ! {
         pwm_slice.set_div_frac(0);
         pwm_slice.set_top(255); // Affects frequency!
         pwm_slice.enable();
-       
-        warn!("PWM: Max duty cycle: {}",  pwm_slice.channel_b.get_max_duty());
+
+        warn!(
+            "PWM: Max duty cycle: {}",
+            pwm_slice.channel_b.get_max_duty()
+        );
 
         // Store a reference to the channel in the global static.
         PWM_AUDIO_CHANNEL = Some(&mut pwm_slice.channel_b);
     }
     // Prepare pin
     // GPIO27 is connected to PWM channel 5B
-    let mut _pin_audio_pwm = pins.gpio27.into_pull_type::<PullNone>().into_function::<FunctionPwm>().into_dyn_pin();
+    let mut _pin_audio_pwm = pins
+        .gpio27
+        .into_pull_type::<PullNone>()
+        .into_function::<FunctionPwm>()
+        .into_dyn_pin();
 
     // --------------- MISC --------------------
     // let mut pin_led = pins.gpio27.into_push_pull_output();
@@ -293,9 +299,11 @@ fn main() -> ! {
         );
 
         // Update, Render & swap frame buffers
-        let visible_change  =app_splash_screen.update(dt_us as i64, time_current_us as i64, &controls);
+        let update_result =
+            app_splash_screen.update(dt_us as i64, time_current_us as i64, &controls);
         pin_led.set_low().unwrap(); // Low ~ Render & FB swap
-        if visible_change {
+
+        if update_result.visible_changes() {
             app_splash_screen.render(&mut display);
             display.commit();
         }
@@ -309,7 +317,6 @@ fn main() -> ! {
     let cores = mc.cores();
     let core1 = &mut cores[1];
     let _test = core1.spawn(unsafe { &mut CORE1_STACK.mem }, core1_task);
-
 
     // let mut app = Mutex::new(app);
     // let app_copy = app.borrow(|app| app.clone());
@@ -334,9 +341,9 @@ fn main() -> ! {
         );
 
         // Update, Render & swap frame buffers
-        let visible_change = app.update(dt_us as i64, time_current_us as i64, &controls);
+        let update_result = app.update(dt_us as i64, time_current_us as i64, &controls);
         pin_led.set_low().unwrap(); // Low ~ Render & FB swap
-        if visible_change {
+        if update_result.visible_changes() {
             app.render(&mut display);
             display.commit();
         }
@@ -354,13 +361,11 @@ static mut PWM_AUDIO_CHANNEL: Option<&'static mut AudioPwm> = None;
 // fn init_pwm(pac: rp2040_hal::pac::Peripherals, resets: &mut rp2040_hal::pac::RESETS) {
 // }
 
-
 // mod qoa;
 // pub use qoa::QoaDecoder;
 
 fn core1_task() -> () {
-
-    while unsafe { PWM_AUDIO_CHANNEL.is_none()} {
+    while unsafe { PWM_AUDIO_CHANNEL.is_none() } {
         cortex_m::asm::dmb();
     }
 
@@ -371,7 +376,6 @@ fn core1_task() -> () {
     //     cortex_m::asm::wfi();
     // }
 }
-
 
 /// Converts a signed 16‑bit sample (range: –32768..32767) into a PWM duty cycle (0..max_duty).
 fn sample_to_duty(sample: i16, max_duty: u16) -> u16 {
@@ -390,16 +394,20 @@ where
     // let qoa_data: &'static [u8] = include_bytes!("../../sine_wave.qoa");
     let qoa_data: &'static [u8] = include_bytes!("../../tools/Original Tetris.qoa");
     let mut dec = QoaDecoder::<'static>::new(qoa_data).expect("Invalid QOA file");
-    
+
     // Calculate delay in microseconds per sample.
     let sample_period_us = 1_000_000 / dec.sample_rate();
     const CYCLES_PER_US: u32 = 125; // assuming a 125 MHz clock
 
-    info!("Sample Rate: {} | Sample Period : {}us", dec.sample_rate(), sample_period_us);
+    info!(
+        "Sample Rate: {} | Sample Period : {}us",
+        dec.sample_rate(),
+        sample_period_us
+    );
 
     loop {
         if let Some(samples) = dec.next_sample() {
-            let sample = samples; // [1]; 
+            let sample = samples; // [1];
 
             let duty = sample_to_duty(sample, pwm.get_max_duty());
             pwm.set_duty(duty);
@@ -412,7 +420,6 @@ where
         }
     }
 }
-
 
 #[global_allocator]
 static HEAP: Heap = Heap::empty();

@@ -46,7 +46,7 @@ use embedded_graphics::{
 
 use crate::{
     string_buffer::{self, FixedBuffer},
-    trait_app::Color,
+    trait_app::{Color, RenderStatus, UpdateResult},
     App, Controls, KeyReleaseEvent,
 };
 
@@ -118,7 +118,7 @@ where
 
     /// Delegates the update call, if something is selected and returns `true`. If the
     /// call wasn't delegated, it returns `false`.
-    fn update_process_active(&mut self, dt: i64, t: i64, controls: &Controls) -> Option<bool> {
+    fn update_process_active(&mut self, dt: i64, t: i64, controls: &Controls) -> Option<UpdateResult> {
         if let Some(active_index) = self.active_index {
             let active_app = &mut self.entries[active_index];
             if !active_app.app.close_request() {
@@ -163,7 +163,7 @@ where
         self.close_request.reset();
     }
 
-    fn update(&mut self, dt: i64, t: i64, controls: &Controls) -> bool {
+    fn update(&mut self, dt: i64, t: i64, controls: &Controls) -> UpdateResult {
         if let Some(update) = self.update_process_active(dt, t, controls) {
             return update;
         }
@@ -176,7 +176,7 @@ where
         self.close_request.update(controls.buttons_b);
 
         self.update_process_menu_movement(controls);
-        true
+        RenderStatus::VisibleChange.into()
     }
 
     fn render(&self, target: &mut D) {

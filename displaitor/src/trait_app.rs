@@ -21,10 +21,30 @@ pub enum AudioID {
     MusicPen,
 }
 
-pub enum UpdateResult {
+#[derive(PartialEq)]
+pub enum RenderStatus {
     VisibleChange,
-    VisibleChangeQueueAudio(AudioID),
     NoVisibleChange,
+}
+
+pub struct UpdateResult {
+    pub(crate) render_result: RenderStatus,
+    pub(crate) audio_queue_request: Option<AudioID>,
+}
+
+impl Into<UpdateResult> for RenderStatus {
+    fn into(self) -> UpdateResult {
+        UpdateResult {
+            render_result: self,
+            audio_queue_request: None,
+        }
+    }
+}
+
+impl UpdateResult {
+    pub fn visible_changes(&self) -> bool {
+        self.render_result == RenderStatus::VisibleChange
+    }
 }
 
 pub type AppBoxed<D, C> = alloc::boxed::Box<dyn App<Target = D, Color = C>>;
@@ -39,7 +59,7 @@ pub trait App {
     /// Updates the internal state. `true` is returned, if the render would be different from the previous state.
     /// So `false` indicates, that the previous frame can be re-used.
     #[must_use = "Skipping a expensive draw call is mandatory on embedded"]
-    fn update(&mut self, dt_us: i64, t_us: i64, controls: &Controls) -> bool;
+    fn update(&mut self, dt_us: i64, t_us: i64, controls: &Controls) -> UpdateResult;
 
     /// Draw the current state to the screen.
     fn render(&self, target: &mut Self::Target);

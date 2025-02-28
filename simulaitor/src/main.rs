@@ -57,9 +57,9 @@ where
         last_time = now;
 
         // Update the app
-        let visible_changes = app.update(dt, elapsed_time, &controls);
+        let update_result = app.update(dt, elapsed_time, &controls);
 
-        if visible_changes {
+        if update_result.visible_changes() {
             // Clear the display
             display.clear(Rgb565::BLACK).unwrap();
 

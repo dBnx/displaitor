@@ -1,5 +1,4 @@
-use defmt::{debug, info};
-
+use defmt::debug;
 
 #[derive(Default, Debug)]
 pub struct Monitor {
@@ -20,15 +19,17 @@ impl Monitor {
 
         const FRAMES_RENDERED_MIN: u32 = 60;
         const TIME_PASSED_MIN_MS: u32 = 3_000;
-        if self.frames_rendered < FRAMES_RENDERED_MIN || dt_us < TIME_PASSED_MIN_MS*1000 {
+        if self.frames_rendered < FRAMES_RENDERED_MIN || dt_us < TIME_PASSED_MIN_MS * 1000 {
             return None;
         }
 
         let dt_ms = dt_us / 1000;
         let fps = self.frames_rendered * 1000 / dt_ms.max(1);
 
-        debug!("FPS: {:03}Hz | dt {:04}ms | frames: {:03}", fps, dt_ms, self.frames_rendered);
-
+        debug!(
+            "FPS: {:03}Hz | dt {:04}ms | frames: {:03}",
+            fps, dt_ms, self.frames_rendered
+        );
 
         self.frames_rendered = 0;
         self.last_update = t_us;

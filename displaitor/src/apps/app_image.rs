@@ -11,7 +11,7 @@ use embedded_graphics::{
 use heapless::Vec;
 use tinyqoi::Qoi;
 
-use crate::{trait_app::Color, App, Controls, KeyReleaseEvent};
+use crate::{trait_app::{Color, RenderStatus, UpdateResult}, App, Controls, KeyReleaseEvent};
 
 #[derive(PartialEq, Debug)]
 pub struct Image<D, C>
@@ -51,9 +51,9 @@ where
         self.close_request.reset();
     }
 
-    fn update(&mut self, dt: i64, _t: i64, controls: &Controls) -> bool {
+    fn update(&mut self, dt: i64, _t: i64, controls: &Controls) -> UpdateResult {
         self.close_request.update(controls.buttons_b);
-        true // TODO: false after the first time
+        RenderStatus::VisibleChange.into() // TODO: false after the first time
     }
 
     fn render(&self, target: &mut Self::Target) {

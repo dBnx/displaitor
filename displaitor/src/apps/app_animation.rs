@@ -10,7 +10,7 @@ use embedded_graphics::{
 };
 use tinyqoi::Qoi;
 
-use crate::{trait_app::Color, App, Controls, KeyReleaseEvent};
+use crate::{trait_app::{Color, RenderStatus, UpdateResult}, App, Controls, KeyReleaseEvent};
 
 #[derive(PartialEq, Debug)]
 pub struct Animation<D, C, const N: usize>
@@ -59,16 +59,16 @@ where
         self.close_request.reset();
     }
 
-    fn update(&mut self, dt: i64, t: i64, controls: &Controls) -> bool {
+    fn update(&mut self, dt: i64, t: i64, controls: &Controls) -> UpdateResult {
         self.close_request.update(controls.buttons_b);
 
         if t - self.current_frame_time > 50_000 {
             self.current_frame_time = t;
             self.current_frame_index += 1;
             self.current_frame_index %= N;
-            true
+            RenderStatus::VisibleChange.into()
         } else {
-            true // TODO: false after first render
+            RenderStatus::VisibleChange.into() // TODO: false after the first time
         }
     }
 

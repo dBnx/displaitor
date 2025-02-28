@@ -12,7 +12,7 @@ use tinyrand::{Rand, Seeded, StdRand};
 
 use crate::{
     string_buffer::{self, FixedBuffer},
-    trait_app::Color,
+    trait_app::{Color, RenderStatus, UpdateResult},
     App, Controls, KeyReleaseEvent,
 };
 
@@ -138,7 +138,7 @@ where
         self.last_update = 0;
     }
 
-    fn update(&mut self, dt: i64, t: i64, controls: &Controls) -> bool {
+    fn update(&mut self, dt: i64, t: i64, controls: &Controls) -> UpdateResult {
         // Kill game with 'B'
         self.close_request.update(controls.buttons_b);
 
@@ -155,7 +155,7 @@ where
         // Time gate
         const MIN_UPDATE_DT_US: i64 = 60 * 1000; // 100 ms
         if t - self.last_update < MIN_UPDATE_DT_US {
-            return false;
+            return RenderStatus::NoVisibleChange.into();
         }
         self.last_update = t;
 
@@ -172,7 +172,7 @@ where
             self.spawn_food();
         }
 
-        true
+        RenderStatus::VisibleChange.into()
     }
 
     fn render(&self, target: &mut Self::Target) {

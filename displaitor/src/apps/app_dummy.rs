@@ -7,7 +7,10 @@ use embedded_graphics::{
 };
 use heapless::Vec;
 
-use crate::{trait_app::Color, App, Controls};
+use crate::{
+    trait_app::{Color, RenderStatus, UpdateResult},
+    App, Controls,
+};
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct Dummy<D, C>
@@ -40,8 +43,8 @@ where
 
     fn reset_state(&mut self) {}
 
-    fn update(&mut self, dt: i64, _t: i64, controls: &Controls) -> bool {
-        true
+    fn update(&mut self, dt: i64, _t: i64, controls: &Controls) -> UpdateResult {
+        RenderStatus::VisibleChange.into()
     }
 
     fn render(&self, target: &mut Self::Target) {}
