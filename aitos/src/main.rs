@@ -293,10 +293,12 @@ fn main() -> ! {
         );
 
         // Update, Render & swap frame buffers
-        app_splash_screen.update(dt_us as i64, time_current_us as i64, &controls);
+        let visible_change  =app_splash_screen.update(dt_us as i64, time_current_us as i64, &controls);
         pin_led.set_low().unwrap(); // Low ~ Render & FB swap
-        app_splash_screen.render(&mut display);
-        display.commit();
+        if visible_change {
+            app_splash_screen.render(&mut display);
+            display.commit();
+        }
 
         let _ = monitor.tick(time_current_us as u32);
     }
@@ -332,10 +334,12 @@ fn main() -> ! {
         );
 
         // Update, Render & swap frame buffers
-        app.update(dt_us as i64, time_current_us as i64, &controls);
+        let visible_change = app.update(dt_us as i64, time_current_us as i64, &controls);
         pin_led.set_low().unwrap(); // Low ~ Render & FB swap
-        app.render(&mut display);
-        display.commit();
+        if visible_change {
+            app.render(&mut display);
+            display.commit();
+        }
 
         let _ = monitor.tick(time_current_us as u32);
     }

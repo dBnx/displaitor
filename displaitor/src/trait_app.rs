@@ -5,9 +5,29 @@ use embedded_graphics::{
 
 use crate::Controls;
 
-pub trait Color: PixelColor + RgbColor + WebColors + From<Rgb888> {}
+pub trait Color: PixelColor + RgbColor + WebColors + From<Rgb888> + Clone {}
 
 impl Color for Rgb565 {}
+
+// TODO: Move to separate crate in workspace
+pub enum AudioID {
+    BootUp,
+    Ping,
+    Pong,
+    Nom,
+    GameOver,
+    MusicDepp,
+    MusicTetris,
+    MusicPen,
+}
+
+pub enum UpdateResult {
+    VisibleChange,
+    VisibleChangeQueueAudio(AudioID),
+    NoVisibleChange,
+}
+
+pub type AppBoxed<D, C> = alloc::boxed::Box<dyn App<Target = D, Color = C>>;
 
 pub trait App {
     type Target: DrawTarget;
@@ -18,6 +38,7 @@ pub trait App {
 
     /// Updates the internal state. `true` is returned, if the render would be different from the previous state.
     /// So `false` indicates, that the previous frame can be re-used.
+    #[must_use = "Skipping a expensive draw call is mandatory on embedded"]
     fn update(&mut self, dt_us: i64, t_us: i64, controls: &Controls) -> bool;
 
     /// Draw the current state to the screen.

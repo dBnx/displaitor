@@ -12,6 +12,7 @@ use tinyqoi::Qoi;
 
 use crate::{trait_app::Color, App, Controls, KeyReleaseEvent};
 
+#[derive(PartialEq, Debug)]
 pub struct Animation<D, C, const N: usize>
 where
     D: DrawTarget<Color = C>,

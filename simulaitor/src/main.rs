@@ -57,16 +57,18 @@ where
         last_time = now;
 
         // Update the app
-        app.update(dt, elapsed_time, &controls);
+        let visible_changes = app.update(dt, elapsed_time, &controls);
 
-        // Clear the display
-        display.clear(Rgb565::BLACK).unwrap();
+        if visible_changes {
+            // Clear the display
+            display.clear(Rgb565::BLACK).unwrap();
 
-        // Render the app
-        app.render(&mut display);
+            // Render the app
+            app.render(&mut display);
 
-        // Update the window
-        window.update(&display);
+            // Update the window
+            window.update(&display);
+        }
 
         // Handle events
         for event in window.events() {

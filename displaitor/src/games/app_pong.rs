@@ -12,6 +12,7 @@ use crate::trait_app::Color;
 use crate::{string_buffer, App, Controls, KeyReleaseEvent};
 
 // TODO: Make screen size a parameter of the App struct.
+#[derive(Clone, PartialEq, Debug)]
 pub struct Pong<D, C>
 where
     D: DrawTarget<Color = C>,

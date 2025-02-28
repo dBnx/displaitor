@@ -1,4 +1,4 @@
-#[derive(Default, Clone, PartialEq)]
+#[derive(Default, Clone, PartialEq, Debug)]
 enum States {
     #[default]
     KeyUnknown,
@@ -7,7 +7,7 @@ enum States {
     KeyReleased,
 }
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, PartialEq, Debug)]
 pub struct KeyReleaseEvent {
     state: States,
     fired: bool,

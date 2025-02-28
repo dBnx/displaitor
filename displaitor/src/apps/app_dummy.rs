@@ -9,6 +9,7 @@ use heapless::Vec;
 
 use crate::{trait_app::Color, App, Controls};
 
+#[derive(Clone, PartialEq, Debug)]
 pub struct Dummy<D, C>
 where
     D: DrawTarget<Color = C>,
@@ -39,9 +40,11 @@ where
 
     fn reset_state(&mut self) {}
 
-    fn update(&mut self, dt: i64, _t: i64, controls: &Controls) -> bool {true}
+    fn update(&mut self, dt: i64, _t: i64, controls: &Controls) -> bool {
+        true
+    }
 
-    fn render(& self, target: &mut Self::Target) {}
+    fn render(&self, target: &mut Self::Target) {}
 
     fn teardown(&mut self) {}
 

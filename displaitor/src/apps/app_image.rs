@@ -1,4 +1,4 @@
-/// Just dispalys an image
+/// Just displays an image
 use core::marker::PhantomData;
 
 use embedded_error_chain::ChainError;
@@ -13,6 +13,7 @@ use tinyqoi::Qoi;
 
 use crate::{trait_app::Color, App, Controls, KeyReleaseEvent};
 
+#[derive(PartialEq, Debug)]
 pub struct Image<D, C>
 where
     D: DrawTarget<Color = C>,
