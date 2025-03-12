@@ -96,19 +96,41 @@ where
             )),
         },
         apps::MenuEntry {
-            name: "Ferd",
-            app: Box::new(apps::Image::<D, C>::new(include_bytes!(
-                "../assets/Ferd.qoi"
-            ))),
+            name: "Hyper!",
+            app: Box::new(apps::Animation::new(
+                [
+                    include_bytes!("../assets/hyperspace/0001.qoi"),
+                    include_bytes!("../assets/hyperspace/0002.qoi"),
+                    include_bytes!("../assets/hyperspace/0003.qoi"),
+                    include_bytes!("../assets/hyperspace/0004.qoi"),
+                    include_bytes!("../assets/hyperspace/0005.qoi"),
+                    include_bytes!("../assets/hyperspace/0006.qoi"),
+                    include_bytes!("../assets/hyperspace/0007.qoi"),
+                    include_bytes!("../assets/hyperspace/0008.qoi"),
+                    include_bytes!("../assets/hyperspace/0009.qoi"),
+                    include_bytes!("../assets/hyperspace/0010.qoi"),
+                    include_bytes!("../assets/hyperspace/0011.qoi"),
+                    include_bytes!("../assets/hyperspace/0012.qoi"),
+                    include_bytes!("../assets/hyperspace/0013.qoi"),
+                    include_bytes!("../assets/hyperspace/0014.qoi"),
+                ],
+                AudioID::Stop,
+            )),
         },
+        apps::MenuEntry {
+            name: "A break",
+            app: Box::new(apps::Animation::new(
+                [
+                    include_bytes!("../assets/fire2/0001.qoi"),
+                    include_bytes!("../assets/fire2/0002.qoi"),
+                    include_bytes!("../assets/fire2/0003.qoi"),
+                    include_bytes!("../assets/fire2/0004.qoi"),
+                ],
+                AudioID::Stop,
+            )),
+        }, 
         //  TODO: With love 
         //  - Pati, Elena, Manuel, David
-        apps::MenuEntry {
-            name: "Battle Bull",
-            app: Box::new(apps::Image::new(include_bytes!(
-                "../assets/Battle Bull.qoi"
-            ))),
-        },
     ]);
 
     let scrolling: apps::ScrollingText<D, C, _> =
@@ -120,12 +142,12 @@ where
             app: Box::new(scrolling),
         },
         apps::MenuEntry {
-            name: "Games",
-            app: Box::new(games_menu),
+            name: "Imageine",
+            app: Box::new(animation_menu),
         },
         apps::MenuEntry {
-            name: "Image-ine!",
-            app: Box::new(animation_menu),
+            name: "Games",
+            app: Box::new(games_menu),
         },
     ]);
     let _ = m.pre_select_entry(0);

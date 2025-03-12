@@ -27,7 +27,9 @@ use hub75_pio::{self, dma::DMAExt, lut::GammaLut};
 use qoa_decoder::QoaDecoder;
 use rp2040_hal::gpio::FunctionPwm;
 use rp2040_hal::pwm;
-use rp2040_hal::{gpio::PullNone, multicore, pio::PIOExt, Timer};
+use rp2040_hal::{gpio::PullNone, pio::PIOExt, Timer};
+#[cfg(feature="audio")]
+use rp2040_hal::multicore;
 
 // use cortex_m::interrupt::Mutex;
 use panic_probe as _;
@@ -170,43 +172,7 @@ fn main() -> ! {
     let mut pin_hub75_addre = pins.gpio10.into_push_pull_output();
     let _ = pin_hub75_addre.set_low();
 
-    /*
-    let mut pin_led = pins.led.into_push_pull_output();
-    let pin_dpad_u = pins.gpio22.into_pull_up_input();
-    let pin_dpad_d = pins.gpio21.into_pull_up_input();
-    let pin_dpad_l = pins.gpio20.into_pull_up_input();
-    let pin_dpad_r = pins.gpio19.into_pull_up_input();
-    let pin_button_a = pins.gpio18.into_pull_up_input();
-    let pin_button_b = pins.gpio17.into_pull_up_input();
-    let _pin_button_s = pins.gpio16.into_pull_up_input();
-    */
-    // let mut pwm = Pwm::new(pac.PWM, &mut pac.RESETS);
-
     // --------------- PWM --------------------
-    /*
-    // Initialize PWM peripheral
-    let mut pwm_slices = rp2040_hal::pwm::Slices::new(pac.PWM, &mut resets);
-    let pwm_slice = &mut pwm_slices.pwm0;
-    pwm_slice.set_div_int(125);
-    pwm_slice.enable();
-    let pwm_channel = &mut pwm_slice.channel_a;
-    pwm_channel.enable();
-
-    // Prepare pin
-    let mut _pin_audio_pwm = pins.gpio27.into_pull_type::<PullNone>().into_function::<FunctionPwm>().into_dyn_pin();
-
-    // Bind the dynamic pin to the PWM channel
-    // let mut dyn_pwm_channel = pwm_channel. .bind_to_dyn_pin(&mut pin_audio_pwm);
-
-
-    unsafe {
-        PWM_AUDIO_CHANNEL = Some(pwm_channel);
-        // Memory barriers: Ensure explicit accesses are complete & ensure memory access ordering
-        cortex_m::asm::dsb();
-        cortex_m::asm::dmb();
-    }
-    */
-    // Init PWM
     unsafe {
         // Write the PWM slices into the static. This makes them 'static.
         PWM_SLICES.write(pwm::Slices::new(pac.PWM, &mut resets));
@@ -415,6 +381,7 @@ static mut AUDIO_ID: Option<AudioID> = None;
 // mod qoa;
 // pub use qoa::QoaDecoder;
 
+#[cfg(feature="audio")]
 fn core1_task() -> () {
     while unsafe { PWM_AUDIO_CHANNEL.is_none() || TIMER.is_none() } {
         cortex_m::asm::dmb();
