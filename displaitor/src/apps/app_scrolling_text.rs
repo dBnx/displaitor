@@ -60,10 +60,11 @@ where
     /// - The current and next message indices (and colors) are chosen at random.
     pub fn new(messages: [&'static str; N]) -> Self {
         let mut prng = StdRand::seed(0xDEAD_BEEF);
-        let index_current = prng.next_lim_usize(N);
-        let index_next = prng.next_lim_usize(N);
+        let index_current = 0; // prng.next_lim_usize(N);
+        let index_next = 1;
         // Generate random colors. We assume that rand() returns a u32.
-        let current_color = get_random_color(&mut prng);
+        let current_color = C::CSS_LIME_GREEN; // get_random_color(&mut prng);
+        // let current_color = get_random_color(&mut prng);
         let next_color = get_random_color(&mut prng);
 
         Self {

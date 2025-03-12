@@ -30,6 +30,7 @@ impl KeyReleaseEvent {
             // Only transition from unknown to down, if the current key is actually down. Otherwise we
             // couldn't detect a real press when starting a new app.
             States::KeyUnknown if current_state == false => self.state = States::KeyDown,
+            States::KeyUnknown if current_state == true => self.state = States::KeyUp,
             States::KeyDown if current_state == true => self.state = States::KeyUp,
             States::KeyUp if current_state == false => self.state = States::KeyReleased,
             States::KeyReleased if current_state == false => self.state = States::KeyDown,

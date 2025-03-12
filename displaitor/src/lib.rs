@@ -145,9 +145,13 @@ where
             name: "Imageine",
             app: Box::new(animation_menu),
         },
+        // apps::MenuEntry {
+        //     name: "Games",
+        //     app: Box::new(games_menu),
+        // },
         apps::MenuEntry {
-            name: "Games",
-            app: Box::new(games_menu),
+            name: "Pong",
+            app: Box::new(games::Pong::<D, C>::new(64, 32)),
         },
     ]);
     let _ = m.pre_select_entry(0);
