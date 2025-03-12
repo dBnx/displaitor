@@ -1,4 +1,6 @@
-#[derive(Default, Clone, PartialEq, Debug)]
+use defmt::info;
+
+#[derive(Default, Clone, PartialEq, Debug, defmt::Format)]
 enum States {
     #[default]
     KeyUnknown,

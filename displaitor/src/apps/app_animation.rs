@@ -10,7 +10,7 @@ use embedded_graphics::{
 };
 use tinyqoi::Qoi;
 
-use crate::{trait_app::{Color, RenderStatus, UpdateResult}, App, Controls, KeyReleaseEvent};
+use crate::{trait_app::{Color, RenderStatus, UpdateResult}, App, AudioID, Controls, KeyReleaseEvent};
 
 #[derive(PartialEq, Debug)]
 pub struct Animation<D, C, const N: usize>
@@ -21,8 +21,10 @@ where
     images: [Qoi<'static>; N],
     current_frame_index: usize,
     current_frame_time: i64,
+    background_music: AudioID,
 
     close_request: KeyReleaseEvent,
+    music_stop_send: bool,
     _marker: PhantomData<D>,
 }
 
@@ -31,15 +33,17 @@ where
     D: DrawTarget<Color = C>,
     C: PixelColor + RgbColor,
 {
-    pub fn new(qoi_data: [&'static [u8]; N]) -> Self {
+    pub fn new(qoi_data: [&'static [u8]; N], background_music: AudioID) -> Self {
         let images = qoi_data.map(|data| Qoi::new(data).expect("Invalid QOI data"));
 
         Self {
             images,
             current_frame_index: 0,
             current_frame_time: 0,
+            background_music,
 
             close_request: KeyReleaseEvent::new(),
+            music_stop_send: false,
             _marker: Default::default(),
         }
     }
@@ -57,18 +61,35 @@ where
         self.current_frame_index = 0;
         self.current_frame_time = 0;
         self.close_request.reset();
+        self.music_stop_send = false;
     }
 
     fn update(&mut self, dt: i64, t: i64, controls: &Controls) -> UpdateResult {
         self.close_request.update(controls.buttons_b);
 
+        let mut frame_changed = false;
         if t - self.current_frame_time > 50_000 {
             self.current_frame_time = t;
             self.current_frame_index += 1;
             self.current_frame_index %= N;
-            RenderStatus::VisibleChange.into()
+            frame_changed = true;
+        }
+
+        let render_result = if frame_changed { RenderStatus::VisibleChange} else {RenderStatus::NoVisibleChange};
+
+        // If we should stop, then detect it here and send audio stop, so 
+        // the song doesn't play in the top-level widget until finished.
+        if self.close_request.fired() {
+            self.music_stop_send = true;
+            UpdateResult {
+                render_result,
+                audio_queue_request: Some(AudioID::Stop),
+            }
         } else {
-            RenderStatus::VisibleChange.into() // TODO: false after the first time
+            UpdateResult {
+                render_result,
+                audio_queue_request: Some(self.background_music.clone()),
+            }
         }
     }
 
@@ -83,6 +104,6 @@ where
     fn teardown(&mut self) {}
 
     fn close_request(&self) -> bool {
-        self.close_request.fired()
+        self.music_stop_send
     }
 }

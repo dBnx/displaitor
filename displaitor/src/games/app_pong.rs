@@ -9,7 +9,7 @@ use embedded_graphics::text::Text;
 
 use crate::string_buffer::FixedBuffer;
 use crate::trait_app::{Color, RenderStatus, UpdateResult};
-use crate::{string_buffer, App, Controls, KeyReleaseEvent};
+use crate::{string_buffer, App, AudioID, Controls, KeyReleaseEvent};
 
 // TODO: Make screen size a parameter of the App struct.
 #[derive(Clone, PartialEq, Debug)]
@@ -104,9 +104,12 @@ where
         self.ball_pos.x += self.ball_velocity.x;
         self.ball_pos.y += self.ball_velocity.y;
 
+        let mut audio_id = None;
+
         // Bounce ball off the top and bottom walls
         if self.ball_pos.y <= 0 || self.ball_pos.y >= self.screen_height - self.ball_size {
             self.ball_velocity.y = -self.ball_velocity.y;
+            // TODO: audio_id = AudioID::Dumpf;
         }
 
         // Check for paddle collisions
@@ -115,6 +118,7 @@ where
                 && self.ball_pos.y <= self.paddle1_pos + self.paddle_height
             {
                 self.ball_velocity.x = -self.ball_velocity.x;
+                audio_id = Some(AudioID::Ping);
             } else {
                 self.score2 += 1;
                 self.ball_pos = Point::new(self.screen_width / 2, self.screen_height / 2);
@@ -126,6 +130,7 @@ where
                 && self.ball_pos.y <= self.paddle2_pos + self.paddle_height
             {
                 self.ball_velocity.x = -self.ball_velocity.x;
+                audio_id = Some(AudioID::Pong);
             } else {
                 self.score1 += 1;
                 self.ball_pos = Point::new(self.screen_width / 2, self.screen_height / 2);
@@ -139,7 +144,10 @@ where
             self.paddle2_pos = (self.paddle2_pos - 2).max(0);
         }
 
-        RenderStatus::VisibleChange.into()
+        UpdateResult {
+            render_result: RenderStatus::VisibleChange,
+            audio_queue_request: audio_id,
+        }
     }
 
     fn render(&self, target: &mut Self::Target) {

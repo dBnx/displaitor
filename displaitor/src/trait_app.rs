@@ -10,7 +10,9 @@ pub trait Color: PixelColor + RgbColor + WebColors + From<Rgb888> + Clone {}
 impl Color for Rgb565 {}
 
 // TODO: Move to separate crate in workspace
+#[derive(Clone, Copy, PartialEq, defmt::Format, core::fmt::Debug)]
 pub enum AudioID {
+    Stop,
     BootUp,
     Ping,
     Pong,
@@ -18,7 +20,27 @@ pub enum AudioID {
     GameOver,
     MusicDepp,
     MusicTetris,
+    MusicPPAP,
     MusicPen,
+    MusicNyan,
+}
+
+impl AudioID {
+    pub fn into_audio_file(&self) -> Option<&'static [u8]> {
+        use AudioID::*;
+        match self {
+            // BootUp => include_bytes!("../assets/audio/boot_up.qoa"),
+            Ping => Some(include_bytes!("../../assets/audio/ping.qoa")),
+            Pong => Some(include_bytes!("../../assets/audio/pong.qoa")),
+            // Nom => Some(include_bytes!("../../assets/audio/nom.qoa")),
+            // GameOver => Some(include_bytes!("../../assets/audio/game_over.qoa")),
+            // MusicDepp => Some(include_bytes!("../../assets/audio/music_depp.qoa")),
+            MusicTetris => Some(include_bytes!("../../assets/audio/music_tetris.qoa")),
+            MusicPen => Some(include_bytes!("../../assets/audio/music_ppap.qoa")),
+            MusicNyan => Some(include_bytes!("../../assets/audio/music_nyan_cat.qoa")),
+            _ => None
+        }
+    }
 }
 
 #[derive(PartialEq)]
@@ -44,6 +66,10 @@ impl Into<UpdateResult> for RenderStatus {
 impl UpdateResult {
     pub fn visible_changes(&self) -> bool {
         self.render_result == RenderStatus::VisibleChange
+    }
+
+    pub fn audio_queue_request(&self) -> Option<AudioID> {
+        self.audio_queue_request
     }
 }
 

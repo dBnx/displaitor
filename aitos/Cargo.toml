@@ -11,7 +11,9 @@ embedded-hal = { version = "0.2.7" }
 
 defmt = "0.3"
 defmt-rtt = "0.4"
-panic-probe = { version = "0.3", features = ["print-defmt"] }
+# panic-probe = { version = "1.0.0-rc.1"}
+# panic-probe = { version = "1.0.0-rc.1", features = ["print-defmt"] }
+panic-probe = { version = "0.3.2", features = ["print-defmt"] }
 
 # We're using a Pico by default on this template
 rp-pico = "0.8"
@@ -36,6 +38,11 @@ qoa_decoder = {path = "../qoa_decoder"}
 # critical-section = "1.2.0"
 # mutex-trait = "0.2.0"
 
+[features]
+
+default = []
+audio = []
+
 # cargo build/run
 [profile.dev]
 codegen-units = 1
@@ -44,6 +51,7 @@ debug-assertions = true
 incremental = false
 opt-level = 3
 overflow-checks = true
+panic="abort"
 
 [profile.dev.package."*"]
 opt-level = 3
@@ -57,6 +65,7 @@ incremental = false
 lto = 'fat'
 opt-level = 3
 overflow-checks = false
+panic="abort"
 
 # do not optimize proc-macro crates = faster builds from scratch
 [profile.dev.build-override]
@@ -75,7 +84,7 @@ overflow-checks = false
 
 # cargo test
 [profile.test]
-codegen-units = 1
+codegen-units = 8
 debug = 2
 debug-assertions = true
 incremental = false

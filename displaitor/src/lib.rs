@@ -12,12 +12,12 @@ pub mod string_buffer;
 mod trait_app;
 
 use alloc::boxed::Box;
-use apps::{Menu};
+use apps::Menu;
 pub use controls::Controls;
 use embedded_graphics::prelude::{DrawTarget, PixelColor, RgbColor};
 pub(crate) use key_release::KeyReleaseEvent;
-pub use trait_app::App;
 use trait_app::Color;
+pub use trait_app::{App, AudioID};
 
 // Replace with a mod.rs ?
 pub mod apps {
@@ -76,37 +76,43 @@ where
     ]);
     let animation_menu = apps::Menu::new([
         apps::MenuEntry {
+            name: "Nyankatz",
+            app: Box::new(apps::Animation::new(
+                [
+                    include_bytes!("../assets/nyan/01.qoi"),
+                    include_bytes!("../assets/nyan/02.qoi"),
+                    include_bytes!("../assets/nyan/03.qoi"),
+                    include_bytes!("../assets/nyan/04.qoi"),
+                    include_bytes!("../assets/nyan/05.qoi"),
+                    include_bytes!("../assets/nyan/06.qoi"),
+                    include_bytes!("../assets/nyan/07.qoi"),
+                    include_bytes!("../assets/nyan/08.qoi"),
+                    include_bytes!("../assets/nyan/09.qoi"),
+                    include_bytes!("../assets/nyan/10.qoi"),
+                    include_bytes!("../assets/nyan/11.qoi"),
+                    include_bytes!("../assets/nyan/12.qoi"),
+                ],
+                AudioID::MusicNyan,
+            )),
+        },
+        apps::MenuEntry {
             name: "Ferd",
             app: Box::new(apps::Image::<D, C>::new(include_bytes!(
                 "../assets/Ferd.qoi"
             ))),
         },
+        //  TODO: With love 
+        //  - Pati, Elena, Manuel, David
         apps::MenuEntry {
             name: "Battle Bull",
             app: Box::new(apps::Image::new(include_bytes!(
                 "../assets/Battle Bull.qoi"
             ))),
         },
-        apps::MenuEntry {
-            name: "Nyankatz",
-            app: Box::new(apps::Animation::new([
-                include_bytes!("../assets/nyan/01.qoi"),
-                include_bytes!("../assets/nyan/02.qoi"),
-                include_bytes!("../assets/nyan/03.qoi"),
-                include_bytes!("../assets/nyan/04.qoi"),
-                include_bytes!("../assets/nyan/05.qoi"),
-                include_bytes!("../assets/nyan/06.qoi"),
-                include_bytes!("../assets/nyan/07.qoi"),
-                include_bytes!("../assets/nyan/08.qoi"),
-                include_bytes!("../assets/nyan/09.qoi"),
-                include_bytes!("../assets/nyan/10.qoi"),
-                include_bytes!("../assets/nyan/11.qoi"),
-                include_bytes!("../assets/nyan/12.qoi"),
-            ])),
-        },
     ]);
 
-    let scrolling: apps::ScrollingText<D, C, _> = apps::ScrollingText::new(const_str::split!(include_str!("../assets/names.txt"), "\n"));
+    let scrolling: apps::ScrollingText<D, C, _> =
+        apps::ScrollingText::new(const_str::split!(include_str!("../assets/names.txt"), "\n"));
 
     let mut m = apps::Menu::new([
         apps::MenuEntry {
@@ -118,7 +124,7 @@ where
             app: Box::new(games_menu),
         },
         apps::MenuEntry {
-            name: "Imagine!",
+            name: "Image-ine!",
             app: Box::new(animation_menu),
         },
     ]);

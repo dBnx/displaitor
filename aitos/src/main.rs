@@ -5,14 +5,18 @@
 #![allow(incomplete_features)]
 #![allow(static_mut_refs)]
 
+#![allow(unused_variables, unused_mut, unreachable_code, unused_assignments)] // RMME: Debugging
+
 mod monitor;
 
 use alloc::boxed::Box;
+use core::mem::MaybeUninit;
+
 #[allow(unused_imports)]
 use defmt::{debug, error, info, warn};
 // use defmt::*;
 use defmt_rtt as _;
-use displaitor::App;
+use displaitor::{App, AudioID};
 use embedded_alloc::LlffHeap as Heap;
 #[allow(unused_imports)]
 use embedded_graphics::{pixelcolor::Rgb565, prelude::*};
@@ -25,6 +29,7 @@ use rp2040_hal::gpio::FunctionPwm;
 use rp2040_hal::pwm;
 use rp2040_hal::{gpio::PullNone, multicore, pio::PIOExt, Timer};
 
+// use cortex_m::interrupt::Mutex;
 use panic_probe as _;
 
 use bsp::entry;
@@ -46,6 +51,7 @@ static mut DISPLAY_BUFFER: hub75_pio::DisplayMemory<64, 32, COLOR_DEPTH> =
 // type AudioPwm = rp2040_hal::pwm::Channel<rp2040_hal::pwm::Slice<rp2040_hal::pwm::Pwm0, rp2040_hal::pwm::FreeRunning>, rp2040_hal::pwm::A>;
 // type AudioPwm = rp2040_hal::pwm::Channel<>;
 // static mut PWM_AUDIO_CHANNEL: Option<&'static mut AudioPwm> = None;
+static mut AUDIO_ENABLE: bool = true;
 
 #[entry]
 fn main() -> ! {
@@ -248,7 +254,7 @@ fn main() -> ! {
     let pin_dpad_r = pins.gpio18.into_pull_up_input();
     let pin_button_a = pins.gpio14.into_pull_up_input();
     let pin_button_b = pins.gpio15.into_pull_up_input();
-    let pin_button_s = pins.vbus_detect.into_pull_up_input();
+    let pin_button_s = pins.voltage_monitor.into_pull_up_input();
     pin_ce_led_pwr.set_high().unwrap();
     pin_ce_lvl_shft.set_low().unwrap();
 
@@ -275,8 +281,23 @@ fn main() -> ! {
     // µs resolution
     let timer = Timer::new(pac.TIMER, &mut resets, &clocks);
     let mut time_last_us = 0;
+    unsafe { 
+        TIMER = Some(timer.clone());
+    }
 
     let mut monitor = monitor::Monitor::new();
+
+    #[cfg(feature="audio")]
+    {
+        info!("Initialize second core ..");
+        static mut CORE1_STACK: multicore::Stack<6144> = multicore::Stack::new();
+        let mut mc = multicore::Multicore::new(&mut pac.PSM, &mut pac.PPB, &mut sio.fifo);
+        let cores = mc.cores();
+        let core1 = &mut cores[1];
+        let _test = core1.spawn(unsafe { &mut CORE1_STACK.mem }, core1_task);
+    }
+
+    audio_set(AudioID::MusicDepp);
 
     info!("Splash screen");
     while !app_splash_screen.close_request() {
@@ -311,16 +332,13 @@ fn main() -> ! {
         let _ = monitor.tick(time_current_us as u32);
     }
 
-    info!("Initialize second core ..");
-    static mut CORE1_STACK: multicore::Stack<4096> = multicore::Stack::new();
-    let mut mc = multicore::Multicore::new(&mut pac.PSM, &mut pac.PPB, &mut sio.fifo);
-    let cores = mc.cores();
-    let core1 = &mut cores[1];
-    let _test = core1.spawn(unsafe { &mut CORE1_STACK.mem }, core1_task);
 
     // let mut app = Mutex::new(app);
     // let app_copy = app.borrow(|app| app.clone());
     info!("Start loop");
+    audio_reset();
+    // run_app_to_completion();
+    let mut button_s_history: u8 = 0;
     loop {
         pin_led.set_high().unwrap(); // High ~ Update phase
 
@@ -339,9 +357,28 @@ fn main() -> ! {
             pin_dpad_l.is_high().unwrap(),
             pin_dpad_r.is_high().unwrap(),
         );
+        if controls.buttons_s {
+            // info!("Button S    pressed!");
+        }
+        else {
+            warn!("Button S de-pressed!");
+        }
+        button_s_history = (button_s_history << 1) | controls.buttons_s as u8;
+        if button_s_history == 0b1111_0000 {
+            let new = !unsafe{AUDIO_ENABLE};
+            unsafe{AUDIO_ENABLE = !new};
+            info!("Toggle audio: {}", new); 
+        }
 
         // Update, Render & swap frame buffers
         let update_result = app.update(dt_us as i64, time_current_us as i64, &controls);
+
+        // Update Sound Subsystem
+        if let Some(audio_id) = update_result.audio_queue_request() {
+            audio_set(audio_id);
+        }
+
+        // Update Display
         pin_led.set_low().unwrap(); // Low ~ Render & FB swap
         if update_result.visible_changes() {
             app.render(&mut display);
@@ -349,14 +386,28 @@ fn main() -> ! {
         }
 
         let _ = monitor.tick(time_current_us as u32);
+        cortex_m::asm::delay(400);
     }
 }
 
-use core::mem::MaybeUninit;
+fn run_app_to_completion() {
+    todo!("TODO: PTR: Dies.");
+}
+
+fn audio_reset() {
+    let _ = unsafe{AUDIO_ID.take()};
+}
+
+fn audio_set(audio_id: AudioID) {
+    unsafe{AUDIO_ID = Some(audio_id)};
+}
+
 
 type AudioPwm = pwm::Channel<pwm::Slice<pwm::Pwm5, pwm::FreeRunning>, pwm::B>;
 static mut PWM_SLICES: MaybeUninit<pwm::Slices> = MaybeUninit::uninit();
 static mut PWM_AUDIO_CHANNEL: Option<&'static mut AudioPwm> = None;
+static mut TIMER: Option<Timer> = None;
+static mut AUDIO_ID: Option<AudioID> = None;
 
 // fn init_pwm(pac: rp2040_hal::pac::Peripherals, resets: &mut rp2040_hal::pac::RESETS) {
 // }
@@ -365,13 +416,14 @@ static mut PWM_AUDIO_CHANNEL: Option<&'static mut AudioPwm> = None;
 // pub use qoa::QoaDecoder;
 
 fn core1_task() -> () {
-    while unsafe { PWM_AUDIO_CHANNEL.is_none() } {
+    while unsafe { PWM_AUDIO_CHANNEL.is_none() || TIMER.is_none() } {
         cortex_m::asm::dmb();
     }
 
     let audio_pin = unsafe { PWM_AUDIO_CHANNEL.take().expect("PWM pin initialized") };
+    let timer = unsafe { TIMER.take().expect("Timer initialized") };
 
-    play_audio(audio_pin);
+    play_audio(audio_pin,  &timer);
     // loop {
     //     cortex_m::asm::wfi();
     // }
@@ -382,42 +434,118 @@ fn sample_to_duty(sample: i16, max_duty: u16) -> u16 {
     (((sample as i32 + 32768) as u32 * (max_duty as u32)) / 65535) as u16
 }
 
+struct CurrentAudio {
+    id: AudioID,
+    audio: QoaDecoder<'static>,
+    sample_rate: u32,
+    sample_period_us: u32,
+}
+
+impl CurrentAudio {
+    fn new(id: AudioID) -> Option<Self> {
+        let audio = QoaDecoder::new(id.into_audio_file()?).expect("QOA is valid");
+        let sample_rate = audio.sample_rate();
+        let sample_period_us = (1_000_000 / sample_rate) as u32;
+        Some(CurrentAudio {
+            id,
+            audio,
+            sample_rate,
+            sample_period_us,
+        })
+    }
+
+    fn print(&self) {
+        info!(
+            "Playing Audio ID {:?} Sample Rate: {} | Sample Period : {}us",
+            self.id,
+            self.sample_rate,
+            self.sample_period_us
+        );
+    }
+}
+
 /// Plays the embedded QOA file on the provided PWM pin. This function never returns.
 /// It uses the cortex‑m asm delay (assuming a 125 MHz clock) to wait for the sample period.
-pub fn play_audio<P>(pwm: &mut P) -> !
+pub fn play_audio<P>(pwm: &mut P, timer: &Timer) -> !
 where
     P: PwmPin<Duty = u16>,
 {
-    // Embed the QOA file at compile time.
-    // let qoa_data: &'static [u8] = include_bytes!("../../displaitor/assets/Haindling.qoa");
-    // let qoa_data: &'static [u8] = include_bytes!("../../Haindling.qoa");
-    // let qoa_data: &'static [u8] = include_bytes!("../../sine_wave.qoa");
-    let qoa_data: &'static [u8] = include_bytes!("../../tools/Original Tetris.qoa");
-    let mut dec = QoaDecoder::<'static>::new(qoa_data).expect("Invalid QOA file");
-
     // Calculate delay in microseconds per sample.
-    let sample_period_us = 1_000_000 / dec.sample_rate();
     const CYCLES_PER_US: u32 = 125; // assuming a 125 MHz clock
 
-    info!(
-        "Sample Rate: {} | Sample Period : {}us",
-        dec.sample_rate(),
-        sample_period_us
-    );
-
+    let mut current_audio = None;
+    let mut time_last_us = timer.get_counter().ticks();
+    let mut sample_count = 0;
+    let mut last_audio_id = None;
     loop {
-        if let Some(samples) = dec.next_sample() {
-            let sample = samples; // [1];
 
-            let duty = sample_to_duty(sample, pwm.get_max_duty());
-            pwm.set_duty(duty);
-            // Delay for one sample period.
-            cortex_m::asm::delay(sample_period_us * CYCLES_PER_US);
-        } else {
-            warn!("EOF - Reseting audio!");
-            // Loop back to the start of the file.
-            dec.reset();
+        // Update audio queue request
+        let mut reset_audio = false;
+        if let Some(audio) = unsafe {AUDIO_ID.take()} {
+            match &last_audio_id {
+                Some(last_audio) if &audio == last_audio => {
+                    reset_audio = true;
+                }
+                // If we are not playing anything, or something different
+                _ if unsafe{AUDIO_ENABLE} == true => {
+                    last_audio_id = Some(audio);
+
+                    current_audio = CurrentAudio::new(audio);
+                    if let Some( audio) = &current_audio {
+                        audio.print();
+                    }
+                    else 
+                    {
+                        info!("Stopping audio");
+                    }
+                }
+                _ => { }
+            }
         }
+
+        // Wait for next audio
+        if current_audio.is_none() {
+            cortex_m::asm::delay(200);
+            continue;
+        }
+
+        let mut reset = false;
+        {
+            let current_audio = current_audio.as_mut().unwrap();
+
+            let time_current_us = timer.get_counter().ticks();
+
+            if let Some(samples) = current_audio.audio.next_sample() {
+                let sample = samples; // [1];
+
+                let duty = sample_to_duty(sample, pwm.get_max_duty());
+                pwm.set_duty(duty);
+                // Delay for one sample period.
+                let decoding_time = time_current_us.saturating_sub(time_last_us) as u32; // TODO: Make it more robust
+                if decoding_time > current_audio.sample_period_us {
+                    time_last_us = time_current_us;
+                    continue;
+                }
+
+                let sleep_time =current_audio. sample_period_us.saturating_sub(decoding_time);
+                cortex_m::asm::delay(sleep_time * CYCLES_PER_US);
+                sample_count += 1;
+                if sample_count == 20_000 {
+                    info!("#samples: {} | sample period {}µs | decoding time {}µs | sleep for {}µs", sample_count, current_audio.sample_period_us, decoding_time, sleep_time);
+                    sample_count = 0;
+                }
+                time_last_us = time_current_us;
+            } else {
+                warn!("EOF - Reseting audio!");
+                // current_audio.audio.reset();
+                reset = true;
+            }
+        }
+        if reset {
+            current_audio = None;
+            last_audio_id = None;
+        }
+
     }
 }
 
@@ -435,4 +563,24 @@ pub fn heap_init() {
     // #[link_section = ".heap"]
     static mut HEAP_MEM: [MaybeUninit<u8>; HEAP_SIZE] = [MaybeUninit::uninit(); HEAP_SIZE];
     unsafe { HEAP.init(&raw mut HEAP_MEM as usize, HEAP_SIZE) };
+}
+
+// #[cfg(not(test))]
+// #[panic_handler]
+// fn panic(info: &core::panic::PanicInfo) -> ! {
+//     defmt::error!("PANIC: {}", info);
+//     cortex_m::asm::bkpt();
+//     loop {}
+// } 
+
+// #[cfg(not(test))]
+// #[panic_handler]
+// fn panic(_info: &core::panic::PanicInfo) -> ! {
+//     loop {}
+// }
+
+#[defmt::panic_handler]
+fn panic() -> ! {
+    cortex_m::asm::bkpt();
+    loop {}
 }

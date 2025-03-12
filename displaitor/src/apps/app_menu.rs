@@ -1,43 +1,6 @@
 use core::fmt::Write;
-
 use alloc::boxed::Box;
-/// struct DummyApp {
-///     id: u32,
-/// }
-///
-/// impl App for DummyApp {
-///     fn update(&mut self, _dt: i64, _t: i64, _controls: &Controls) {
-///         println!("DummyApp {} is running!", self.id);
-///     }
-///     fn render<D, C>(&mut self, _target: &mut D)
-///     where
-///         D: DrawTarget<Color = C>,
-///         C: PixelColor,
-///     {
-///         println!("Rendering DummyApp {}", self.id);
-///     }
-/// }
-///
-/// fn main() {
-///     let mut app1 = DummyApp { id: 1 };
-///     let mut app2 = DummyApp { id: 2 };
-///
-///     let mut menu: Menu<2, DummyApp> = Menu::new();
-///     menu.add_entry("App 1", app1).unwrap();
-///     menu.add_entry("App 2", app2).unwrap();
-///
-///     let mut controls = Controls {
-///         buttons_a: false,
-///         buttons_b: false,
-///         dpad_up: false,
-///         dpad_down: true,
-///         dpad_left: false,
-///         dpad_right: false,
-///     };
-///
-///     menu.update(0, 0, &controls); // Navigate down
-///     menu.render::<_, Rgb565>(&mut DummyTarget); // Render menu
-/// }
+
 use embedded_graphics::{
     mono_font::{ascii::FONT_6X10, MonoTextStyle},
     prelude::*,
