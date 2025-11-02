@@ -1,7 +1,7 @@
 MEMORY {
     BOOT2 : ORIGIN = 0x10000000, LENGTH = 0x100
-    FLASH : ORIGIN = 0x10000100, LENGTH = 16000K - 0x100 /* 128 Mbit flash */
-    /* FLASH : ORIGIN = 0x10000100, LENGTH = 2048K - 0x100 */ /* Default flash */
+    FLASH : ORIGIN = 0x10000100, LENGTH = 16M - 0x100 /* 128 Mbit flash */
+    /* FLASH : ORIGIN = 0x10000100, LENGTH = 2M - 0x100 */ /* Default flash */
     RAM   : ORIGIN = 0x20000000, LENGTH = 256K
 }
 

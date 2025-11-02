@@ -11,7 +11,6 @@ mod monitor;
 
 use alloc::boxed::Box;
 use core::mem::MaybeUninit;
-
 #[allow(unused_imports)]
 use defmt::{debug, error, info, warn};
 // use defmt::*;
@@ -34,14 +33,14 @@ use rp2040_hal::multicore;
 // use cortex_m::interrupt::Mutex;
 use panic_probe as _;
 
+use rp2040_hal::{self as bsp};
 use bsp::entry;
-use bsp::hal::{
+use bsp::{
     clocks::{init_clocks_and_plls, Clock},
     pac,
     sio::Sio,
     watchdog::Watchdog,
 };
-use rp_pico::{self as bsp};
 
 extern crate alloc;
 
@@ -83,7 +82,7 @@ fn main() -> ! {
     #[allow(unused_variables, unused_mut)]
     let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
 
-    let pins = bsp::Pins::new(
+    let pins = bsp::gpio::Pins::new(
         pac.IO_BANK0,
         pac.PADS_BANK0,
         sio.gpio_bank0,
@@ -216,11 +215,11 @@ fn main() -> ! {
     // --------------- Control --------------------
     let pin_dpad_u = pins.gpio16.into_pull_up_input();
     let pin_dpad_d = pins.gpio17.into_pull_up_input();
-    let pin_dpad_l = pins.b_power_save.into_pull_up_input();
+    let pin_dpad_l = pins.gpio23.into_pull_up_input();
     let pin_dpad_r = pins.gpio18.into_pull_up_input();
     let pin_button_a = pins.gpio14.into_pull_up_input();
     let pin_button_b = pins.gpio15.into_pull_up_input();
-    let pin_button_s = pins.voltage_monitor.into_pull_up_input();
+    let pin_button_s = pins.gpio29.into_pull_up_input();
     pin_ce_led_pwr.set_high().unwrap();
     pin_ce_lvl_shft.set_low().unwrap();
 
@@ -546,8 +545,18 @@ pub fn heap_init() {
 //     loop {}
 // }
 
+
 #[defmt::panic_handler]
 fn panic() -> ! {
     cortex_m::asm::bkpt();
     loop {}
 }
+
+// #[link_section = ".boot_loader"]
+#[link_section = ".boot2"]
+#[no_mangle]
+#[used]
+// pub static BOOT2_FIRMWARE: [u8; 256] = rp2040_boot2::BOOT_LOADER_RAM_MEMCPY;
+// pub static BOOT_LOADER: [u8; 256] = rp2040_boot2::BOOT_LOADER_RAM_MEMCPY;
+pub static BOOT_LOADER: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
+

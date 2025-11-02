@@ -133,8 +133,16 @@ where
         //  - Pati, Elena, Manuel, David
     ]);
 
+    
+    // #[feature(aitor)]
+    // const file_name = "../assets/names.aitor.txt";
+    // #[feature(pati)]
+    // const file_name = "../assets/names.pati.txt";
+    // #[feature(dave)]
+    // const file_name:  = "../assets/names.dave.txt";
+
     let scrolling: apps::ScrollingText<D, C, _> =
-        apps::ScrollingText::new(const_str::split!(include_str!("../assets/names.txt"), "\n"));
+        apps::ScrollingText::new(const_str::split!(include_str!("../assets/names.dave.txt"), "\n"));
 
     let mut m = apps::Menu::new([
         apps::MenuEntry {
