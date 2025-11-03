@@ -397,8 +397,11 @@ fn core1_task() -> () {
 }
 
 /// Converts a signed 16‑bit sample (range: –32768..32767) into a PWM duty cycle (0..max_duty).
+#[inline(always)]
 fn sample_to_duty(sample: i16, max_duty: u16) -> u16 {
-    (((sample as i32 + 32768) as u32 * (max_duty as u32)) / 65535) as u16
+    // Optimized: use wrapping arithmetic to avoid overflow checks
+    let sample_u32 = (sample as u16).wrapping_add(32768) as u32;
+    ((sample_u32 * max_duty as u32) / 65535) as u16
 }
 
 struct CurrentAudio {
@@ -421,6 +424,7 @@ impl CurrentAudio {
         })
     }
 
+    #[inline(never)] // Don't inline logging functions
     fn print(&self) {
         info!(
             "Playing Audio ID {:?} Sample Rate: {} | Sample Period : {}us",
@@ -519,6 +523,7 @@ where
 #[global_allocator]
 static HEAP: Heap = Heap::empty();
 
+#[inline(never)] // Heap init only called once, don't inline
 pub fn heap_init() {
     // Initialize the allocator BEFORE you use it
     use core::mem::MaybeUninit;
