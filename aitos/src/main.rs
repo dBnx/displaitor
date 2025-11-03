@@ -55,6 +55,11 @@ static mut DISPLAY_BUFFER: hub75_pio::DisplayMemory<64, 32, COLOR_DEPTH> =
 // static mut PWM_AUDIO_CHANNEL: Option<&'static mut AudioPwm> = None;
 static mut AUDIO_ENABLE: bool = true;
 
+// Bootloader that copies firmware from flash to RAM before execution
+#[link_section = ".boot2"]
+#[used]
+pub static BOOT_LOADER: [u8; 256] = rp2040_boot2::BOOT_LOADER_RAM_MEMCPY;
+
 #[entry]
 fn main() -> ! {
     info!("Init heap ..");
@@ -356,6 +361,7 @@ fn main() -> ! {
     }
 }
 
+#[allow(dead_code)]
 fn run_app_to_completion() {
     todo!("TODO: PTR: Dies.");
 }
@@ -546,8 +552,8 @@ pub fn heap_init() {
 //     loop {}
 // }
 
-#[defmt::panic_handler]
-fn panic() -> ! {
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
     cortex_m::asm::bkpt();
     loop {}
 }
