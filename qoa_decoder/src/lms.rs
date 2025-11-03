@@ -32,26 +32,49 @@ impl Lms {
     }
 
     /// Computes the prediction: the weighted sum of the history, right-shifted by 13.
+    /// Optimized: loop unrolled for better performance.
+    #[inline(always)]
     pub fn predict(&self) -> i32 {
-        let mut p = 0i32;
-        for j in 0..4 {
-            p += self.history[j] as i32 * self.weights[j] as i32;
-        }
+        // Unroll the loop for better performance - compiler can optimize better
+        let p = (self.history[0] as i32 * self.weights[0] as i32)
+            + (self.history[1] as i32 * self.weights[1] as i32)
+            + (self.history[2] as i32 * self.weights[2] as i32)
+            + (self.history[3] as i32 * self.weights[3] as i32);
         p >> 13
     }
 
     /// Updates the LMS state given the decoded sample `s` and the dequantized residual `r`.
     /// The update is performed in-place.
+    /// Optimized: loop unrolled and history shift optimized.
+    #[inline(always)]
     pub fn update(&mut self, s: i16, r: i32) {
         let delta = r >> 4;
-        for j in 0..4 {
-            if self.history[j] < 0 {
-                self.weights[j] = self.weights[j].wrapping_add((-delta) as i16);
-            } else {
-                self.weights[j] = self.weights[j].wrapping_add(delta as i16);
-            }
+        let delta_i16 = delta as i16;
+        let neg_delta_i16 = (-delta) as i16;
+        
+        // Unroll loop - compiler can optimize better with branch prediction
+        if self.history[0] < 0 {
+            self.weights[0] = self.weights[0].wrapping_add(neg_delta_i16);
+        } else {
+            self.weights[0] = self.weights[0].wrapping_add(delta_i16);
         }
-        // Shift history and append the new sample.
+        if self.history[1] < 0 {
+            self.weights[1] = self.weights[1].wrapping_add(neg_delta_i16);
+        } else {
+            self.weights[1] = self.weights[1].wrapping_add(delta_i16);
+        }
+        if self.history[2] < 0 {
+            self.weights[2] = self.weights[2].wrapping_add(neg_delta_i16);
+        } else {
+            self.weights[2] = self.weights[2].wrapping_add(delta_i16);
+        }
+        if self.history[3] < 0 {
+            self.weights[3] = self.weights[3].wrapping_add(neg_delta_i16);
+        } else {
+            self.weights[3] = self.weights[3].wrapping_add(delta_i16);
+        }
+        
+        // Optimized history shift - manual rotation for better register usage
         self.history[0] = self.history[1];
         self.history[1] = self.history[2];
         self.history[2] = self.history[3];
