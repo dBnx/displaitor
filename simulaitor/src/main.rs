@@ -49,6 +49,19 @@ where
         dpad_right: false,
     };
 
+    // Initial render to initialize the window
+    display.clear(Rgb565::BLACK).unwrap();
+    app.render(&mut display);
+    window.update(&display);
+
+    println!("=== Displaitor Simulator ===");
+    println!("Controls:");
+    println!("  W/S/A/D - D-pad (up/down/left/right)");
+    println!("  Space   - Button A");
+    println!("  Q       - Button B");
+    println!("  R       - Button S");
+    println!("==========================");
+
     'game_loop: loop {
         // Calculate elapsed time
         let now = Instant::now();
@@ -73,25 +86,56 @@ where
         // Handle events
         for event in window.events() {
             match event {
-                SimulatorEvent::Quit => break 'game_loop,
+                SimulatorEvent::Quit => {
+                    println!("Quit event received");
+                    break 'game_loop;
+                }
                 SimulatorEvent::KeyUp { keycode, .. } => match keycode {
-                    Keycode::W => controls.dpad_up = false,
-                    Keycode::S => controls.dpad_down = false,
-                    Keycode::A => controls.dpad_left = false,
-                    Keycode::D => controls.dpad_right = false,
-                    Keycode::Space => controls.buttons_a = false,
-                    Keycode::Q => controls.buttons_b = false,
-                    Keycode::R => controls.buttons_s = false,
+                    Keycode::W => {
+                        controls.dpad_up = false;
+                    }
+                    Keycode::S => {
+                        controls.dpad_down = false;
+                    }
+                    Keycode::A => {
+                        controls.dpad_left = false;
+                    }
+                    Keycode::D => {
+                        controls.dpad_right = false;
+                    }
+                    Keycode::Space => {
+                        controls.buttons_a = false;
+                    }
+                    Keycode::Q => {
+                        controls.buttons_b = false;
+                    }
+                    Keycode::R => {
+                        controls.buttons_s = false;
+                    }
                     _ => {}
                 },
                 SimulatorEvent::KeyDown { keycode, .. } => match keycode {
-                    Keycode::W => controls.dpad_up = true,
-                    Keycode::S => controls.dpad_down = true,
-                    Keycode::A => controls.dpad_left = true,
-                    Keycode::D => controls.dpad_right = true,
-                    Keycode::Space => controls.buttons_a = true,
-                    Keycode::Q => controls.buttons_b = true,
-                    Keycode::R => controls.buttons_s = true,
+                    Keycode::W => {
+                        controls.dpad_up = true;
+                    }
+                    Keycode::S => {
+                        controls.dpad_down = true;
+                    }
+                    Keycode::A => {
+                        controls.dpad_left = true;
+                    }
+                    Keycode::D => {
+                        controls.dpad_right = true;
+                    }
+                    Keycode::Space => {
+                        controls.buttons_a = true;
+                    }
+                    Keycode::Q => {
+                        controls.buttons_b = true;
+                    }
+                    Keycode::R => {
+                        controls.buttons_s = true;
+                    }
                     _ => {}
                 },
                 _ => {}
