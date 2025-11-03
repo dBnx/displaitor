@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 embedded-error-chain = {workspace = true}
 embedded-graphics = {workspace = true}
-embedded-graphics-simulator = "0.7"
+embedded-graphics-simulator = "0.8"
 
 anyhow = "^1.0"
 

@@ -49,6 +49,11 @@ where
         dpad_right: false,
     };
 
+    // Initial render to initialize the window
+    display.clear(Rgb565::BLACK).unwrap();
+    app.render(&mut display);
+    window.update(&display);
+
     'game_loop: loop {
         // Calculate elapsed time
         let now = Instant::now();
