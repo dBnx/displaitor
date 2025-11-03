@@ -148,17 +148,23 @@ where
             return;
         }
 
+        // Cache text styles - created once per render instead of per entry
         let text_style = MonoTextStyle::new(&FONT_6X10, C::WHITE);
         let text_style_active = MonoTextStyle::new(&FONT_6X10, C::MAGENTA);
         let mut buffer = FixedBuffer::<32>::new();
+        
+        // Pre-calculate constants
+        const PREFIX_SELECTED: &str = "> ";
+        const PREFIX_NORMAL: &str = "  ";
+        
         for (i, entry) in self.entries.iter().enumerate() {
             buffer.clear();
 
             let y_offset = i as i32 * 11;
             let (prefix, style) = if i == self.selected_index {
-                ("> ", text_style_active)
+                (PREFIX_SELECTED, text_style_active)
             } else {
-                ("  ", text_style)
+                (PREFIX_NORMAL, text_style)
             };
 
             let _ = write!(buffer, "{}{}", prefix, entry.name);
@@ -173,8 +179,9 @@ where
 
         if self.special_request.fired() {
             // Remove this
+            const SPECIAL_TEXT: &str = "SPECIAL!";
             let _special_test = Text::with_baseline(
-                "SPECIAL!",
+                SPECIAL_TEXT,
                 Point::new(2, 10),
                 text_style_active,
                 Baseline::Top,
