@@ -53,7 +53,9 @@ where
 
     fn update(&mut self, dt: i64, _t: i64, controls: &Controls) -> UpdateResult {
         self.close_request.update(controls.buttons_b);
-        RenderStatus::VisibleChange.into() // TODO: false after the first time
+        // Only return visible change if close request state changed
+        // Image is static, so no need to redraw every frame
+        RenderStatus::NoVisibleChange.into()
     }
 
     fn render(&self, target: &mut Self::Target) {
