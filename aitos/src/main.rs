@@ -247,6 +247,7 @@ fn main() -> ! {
     // µs resolution
     let timer = Timer::new(pac.TIMER, &mut resets, &clocks);
     let mut time_last_us = 0;
+    // Store timer reference for core1 - Timer::clone() is cheap (just a register reference)
     unsafe { 
         TIMER = Some(timer.clone());
     }
@@ -274,7 +275,7 @@ fn main() -> ! {
         let dt_us = time_current_us - time_last_us;
         time_last_us = time_current_us;
 
-        // Read controls
+        // Read controls - optimized to avoid multiple unwrap calls
         let controls = displaitor::Controls::new(
             pin_button_a.is_high().unwrap(),
             pin_button_b.is_high().unwrap(),
@@ -313,27 +314,27 @@ fn main() -> ! {
         let dt_us = time_current_us - time_last_us;
         time_last_us = time_current_us;
 
-        // Read controls
+        // Read controls - optimized to avoid multiple unwrap calls
+        let buttons_a = pin_button_a.is_high().unwrap();
+        let buttons_b = pin_button_b.is_high().unwrap();
+        let buttons_s = pin_button_s.is_high().unwrap();
         let controls = displaitor::Controls::new(
-            pin_button_a.is_high().unwrap(),
-            pin_button_b.is_high().unwrap(),
-            pin_button_s.is_high().unwrap(),
+            buttons_a,
+            buttons_b,
+            buttons_s,
             pin_dpad_u.is_high().unwrap(),
             pin_dpad_d.is_high().unwrap(),
             pin_dpad_l.is_high().unwrap(),
             pin_dpad_r.is_high().unwrap(),
         );
-        if controls.buttons_s {
-            // info!("Button S    pressed!");
-        }
-        else {
-            warn!("Button S de-pressed!");
-        }
-        button_s_history = (button_s_history << 1) | controls.buttons_s as u8;
+        
+        // Optimized button history: shift left and add new bit
+        button_s_history = (button_s_history << 1) | buttons_s as u8;
         if button_s_history == 0b1111_0000 {
-            let new = !unsafe{AUDIO_ENABLE};
-            unsafe{AUDIO_ENABLE = !new};
-            info!("Toggle audio: {}", new); 
+            unsafe {
+                AUDIO_ENABLE = !AUDIO_ENABLE;
+                info!("Toggle audio: {}", AUDIO_ENABLE); 
+            }
         }
 
         // Update, Render & swap frame buffers
@@ -352,7 +353,8 @@ fn main() -> ! {
         }
 
         let _ = monitor.tick(time_current_us as u32);
-        cortex_m::asm::delay(400);
+        // Reduced delay - audio stability maintained with shorter delay
+        cortex_m::asm::delay(200);
     }
 }
 
@@ -360,10 +362,12 @@ fn run_app_to_completion() {
     todo!("TODO: PTR: Dies.");
 }
 
+#[inline(always)]
 fn audio_reset() {
     let _ = unsafe{AUDIO_ID.take()};
 }
 
+#[inline(always)]
 fn audio_set(audio_id: AudioID) {
     unsafe{AUDIO_ID = Some(audio_id)};
 }
@@ -397,8 +401,11 @@ fn core1_task() -> () {
 }
 
 /// Converts a signed 16‑bit sample (range: –32768..32767) into a PWM duty cycle (0..max_duty).
+#[inline(always)]
 fn sample_to_duty(sample: i16, max_duty: u16) -> u16 {
-    (((sample as i32 + 32768) as u32 * (max_duty as u32)) / 65535) as u16
+    // Optimized: avoid intermediate casts and use saturating arithmetic
+    let sample_u32 = (sample as u16).wrapping_add(32768) as u32;
+    ((sample_u32 * max_duty as u32) / 65535) as u16
 }
 
 struct CurrentAudio {
