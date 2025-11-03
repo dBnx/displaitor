@@ -2,6 +2,7 @@
 #![no_std]
 #![feature(iter_collect_into)]
 #![feature(generic_arg_infer)]
+#![warn(clippy::perf)]
 
 #[macro_use]
 extern crate alloc;

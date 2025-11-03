@@ -44,3 +44,89 @@ impl KeyReleaseEvent {
         // self.fired
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_new_initializes_correctly() {
+        let event = KeyReleaseEvent::new();
+        assert!(!event.fired());
+    }
+
+    #[test]
+    fn test_state_transition_unknown_to_down() {
+        let mut event = KeyReleaseEvent::new();
+        event.update(false);
+        assert!(!event.fired());
+    }
+
+    #[test]
+    fn test_state_transition_unknown_to_up() {
+        let mut event = KeyReleaseEvent::new();
+        event.update(true);
+        assert!(!event.fired());
+    }
+
+    #[test]
+    fn test_state_transition_down_to_up() {
+        let mut event = KeyReleaseEvent::new();
+        event.update(false);
+        event.update(true);
+        assert!(!event.fired());
+    }
+
+    #[test]
+    fn test_state_transition_up_to_released() {
+        let mut event = KeyReleaseEvent::new();
+        event.update(false);
+        event.update(true);
+        event.update(false);
+        assert!(event.fired());
+    }
+
+    #[test]
+    fn test_state_transition_complete_cycle() {
+        let mut event = KeyReleaseEvent::new();
+        event.update(false);
+        event.update(true);
+        event.update(false);
+        assert!(event.fired());
+        event.update(false);
+        assert!(!event.fired());
+    }
+
+    #[test]
+    fn test_state_transition_released_to_unknown() {
+        let mut event = KeyReleaseEvent::new();
+        event.update(false);
+        event.update(true);
+        event.update(false);
+        assert!(event.fired());
+        event.update(true);
+        assert!(!event.fired());
+    }
+
+    #[test]
+    fn test_reset() {
+        let mut event = KeyReleaseEvent::new();
+        event.update(false);
+        event.update(true);
+        event.update(false);
+        assert!(event.fired());
+        event.reset();
+        assert!(!event.fired());
+    }
+
+    #[test]
+    fn test_rapid_transitions() {
+        let mut event = KeyReleaseEvent::new();
+        event.update(true);
+        event.update(false);
+        assert!(event.fired());
+        event.update(true);
+        event.update(false);
+        assert!(!event.fired());
+    }
+}
