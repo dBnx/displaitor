@@ -37,6 +37,10 @@ where
     // app.setup();
 
     // Game loop
+    let start_time = Instant::now();
+    const TIMEOUT_SECS: u64 = 30;
+    const TIMEOUT_DURATION: Duration = Duration::from_secs(TIMEOUT_SECS);
+    
     let mut last_time = Instant::now();
     let mut elapsed_time = 0; // Elapsed time in milliseconds
     let mut controls = Controls {
@@ -50,6 +54,10 @@ where
     };
 
     'game_loop: loop {
+        if start_time.elapsed() > TIMEOUT_DURATION {
+            println!("Simulator timeout after {} seconds", TIMEOUT_SECS);
+            break 'game_loop;
+        }
         // Calculate elapsed time
         let now = Instant::now();
         let dt = now.duration_since(last_time).as_micros() as i64;

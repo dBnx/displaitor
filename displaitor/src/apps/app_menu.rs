@@ -1,5 +1,4 @@
 use core::fmt::Write;
-use alloc::boxed::Box;
 
 use embedded_graphics::{
     mono_font::{ascii::FONT_6X10, MonoTextStyle},
@@ -10,7 +9,7 @@ use embedded_graphics::{
 use crate::{
     string_buffer::{self, FixedBuffer},
     trait_app::{Color, RenderStatus, UpdateResult},
-    App, Controls, KeyReleaseEvent,
+    App, AppEnum, Controls, KeyReleaseEvent,
 };
 
 pub struct MenuEntry<D, C>
@@ -19,7 +18,7 @@ where
     C: Color,
 {
     pub name: &'static str,
-    pub app: Box<dyn App<Target = D, Color = C>>,
+    pub app: AppEnum<D, C>,
 }
 
 pub struct Menu<const MAX_ENTRIES: usize, D, C>
@@ -67,13 +66,25 @@ where
         }
     }
 
+    fn count_valid_entries(&self) -> usize {
+        self.entries.iter().take_while(|e| !e.name.is_empty()).count()
+    }
+
     fn select_next(&mut self) {
-        self.selected_index = (self.selected_index + 1) % MAX_ENTRIES;
+        let valid_count = self.count_valid_entries();
+        if valid_count == 0 {
+            return;
+        }
+        self.selected_index = (self.selected_index + 1) % valid_count;
     }
 
     fn select_previous(&mut self) {
+        let valid_count = self.count_valid_entries();
+        if valid_count == 0 {
+            return;
+        }
         self.selected_index = if self.selected_index == 0 {
-            MAX_ENTRIES - 1
+            valid_count - 1
         } else {
             self.selected_index - 1
         };
@@ -151,10 +162,14 @@ where
         let text_style = MonoTextStyle::new(&FONT_6X10, C::WHITE);
         let text_style_active = MonoTextStyle::new(&FONT_6X10, C::MAGENTA);
         let mut buffer = FixedBuffer::<32>::new();
+        let mut display_index = 0;
         for (i, entry) in self.entries.iter().enumerate() {
+            if entry.name.is_empty() {
+                continue;
+            }
             buffer.clear();
 
-            let y_offset = i as i32 * 11;
+            let y_offset = display_index as i32 * 11;
             let (prefix, style) = if i == self.selected_index {
                 ("> ", text_style_active)
             } else {
@@ -169,6 +184,7 @@ where
                 Baseline::Top,
             )
             .draw(target);
+            display_index += 1;
         }
 
         if self.special_request.fired() {
