@@ -29,7 +29,12 @@ where
     prng: StdRand,
 
     dead: bool,
+    death_time: Option<i64>,
     close_request: KeyReleaseEvent,
+    dir_up_request: KeyReleaseEvent,
+    dir_down_request: KeyReleaseEvent,
+    dir_left_request: KeyReleaseEvent,
+    dir_right_request: KeyReleaseEvent,
     time: i32,
     last_update: i64,
 
@@ -65,7 +70,12 @@ where
             time: 0,
             prng,
             dead: false,
+            death_time: None,
             close_request: KeyReleaseEvent::new(),
+            dir_up_request: KeyReleaseEvent::new(),
+            dir_down_request: KeyReleaseEvent::new(),
+            dir_left_request: KeyReleaseEvent::new(),
+            dir_right_request: KeyReleaseEvent::new(),
             last_update: 0,
 
             _marker: Default::default(),
@@ -134,7 +144,12 @@ where
         self.grow = false;
 
         self.dead = false;
+        self.death_time = None;
         self.close_request.reset();
+        self.dir_up_request.reset();
+        self.dir_down_request.reset();
+        self.dir_left_request.reset();
+        self.dir_right_request.reset();
         self.last_update = 0;
     }
 
@@ -142,18 +157,39 @@ where
         // Kill game with 'B'
         self.close_request.update(controls.buttons_b);
 
-        if controls.dpad_up && self.dir != Direction::Down {
+        // Update direction key release events
+        self.dir_up_request.update(controls.dpad_up);
+        self.dir_down_request.update(controls.dpad_down);
+        self.dir_left_request.update(controls.dpad_left);
+        self.dir_right_request.update(controls.dpad_right);
+
+        // Handle auto-reset after death
+        if self.dead {
+            if let Some(death_t) = self.death_time {
+                const RESET_DELAY_US: i64 = 2 * 1_000_000; // 2 seconds
+                if t - death_t >= RESET_DELAY_US {
+                    self.reset_state();
+                    return RenderStatus::VisibleChange.into();
+                }
+            } else {
+                self.death_time = Some(t);
+            }
+            return RenderStatus::VisibleChange.into();
+        }
+
+        // Process direction changes only on button release
+        if self.dir_up_request.fired() && self.dir != Direction::Down {
             self.dir = Direction::Up;
-        } else if controls.dpad_down && self.dir != Direction::Up {
+        } else if self.dir_down_request.fired() && self.dir != Direction::Up {
             self.dir = Direction::Down;
-        } else if controls.dpad_left && self.dir != Direction::Right {
+        } else if self.dir_left_request.fired() && self.dir != Direction::Right {
             self.dir = Direction::Left;
-        } else if controls.dpad_right && self.dir != Direction::Left {
+        } else if self.dir_right_request.fired() && self.dir != Direction::Left {
             self.dir = Direction::Right;
         }
 
         // Time gate
-        const MIN_UPDATE_DT_US: i64 = 60 * 1000; // 100 ms
+        const MIN_UPDATE_DT_US: i64 = 60 * 1000; // 60 ms
         if t - self.last_update < MIN_UPDATE_DT_US {
             return RenderStatus::NoVisibleChange.into();
         }
@@ -165,6 +201,7 @@ where
         // Check for collisions
         if self.check_collision() || self.check_bounds() {
             self.dead = true;
+            self.death_time = Some(t);
         }
 
         // Spawn new food if needed
