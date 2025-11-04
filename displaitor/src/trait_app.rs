@@ -30,14 +30,14 @@ impl AudioID {
         use AudioID::*;
         match self {
             // BootUp => include_bytes!("../assets/audio/boot_up.qoa"),
-            Ping => Some(include_bytes!("../../assets/audio/ping.qoa")),
-            Pong => Some(include_bytes!("../../assets/audio/pong.qoa")),
+            // Ping => Some(include_bytes!("../../assets/audio/ping.qoa")),
+            // Pong => Some(include_bytes!("../../assets/audio/pong.qoa")),
             // Nom => Some(include_bytes!("../../assets/audio/nom.qoa")),
             // GameOver => Some(include_bytes!("../../assets/audio/game_over.qoa")),
             // MusicDepp => Some(include_bytes!("../../assets/audio/music_depp.qoa")),
-            MusicTetris => Some(include_bytes!("../../assets/audio/music_tetris.qoa")),
-            MusicPen => Some(include_bytes!("../../assets/audio/music_ppap.qoa")),
-            MusicNyan => Some(include_bytes!("../../assets/audio/music_nyan_cat.qoa")),
+            // MusicTetris => Some(include_bytes!("../../assets/audio/music_tetris.qoa")),
+            // MusicPen => Some(include_bytes!("../../assets/audio/music_ppap.qoa")),
+            // MusicNyan => Some(include_bytes!("../../assets/audio/music_nyan_cat.qoa")),
             _ => None
         }
     }
