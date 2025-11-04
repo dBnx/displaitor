@@ -16,3 +16,4 @@ This rust workspace hosts many different libraries and executables for different
 - Use best practices and use `cargo check` and `cargo clippy` often.
 - Use `cargo clean` between compiling for different architectures (native or the microcontroller).
 - Use conventinal commit messages.
+- Use a timeout when running the simulaitor binary. Otherwise it will never quit.
