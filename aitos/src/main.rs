@@ -11,22 +11,26 @@ mod monitor;
 
 use alloc::boxed::Box;
 use core::mem::MaybeUninit;
+
 #[allow(unused_imports)]
 use defmt::{debug, error, info, warn};
 // use defmt::*;
 use defmt_rtt as _;
 use displaitor::{App, AudioID};
 use embedded_alloc::LlffHeap as Heap;
+
 #[allow(unused_imports)]
 use embedded_graphics::{pixelcolor::Rgb565, prelude::*};
-#[allow(unused_imports)]
-use embedded_hal::digital::v2::{InputPin, OutputPin, ToggleableOutputPin};
-use embedded_hal::PwmPin;
+
+use embedded_hal_02::digital::v2::{InputPin, OutputPin};
+use embedded_hal_02::PwmPin;
+
 use hub75_pio::{self, dma::DMAExt, lut::GammaLut};
 use qoa_decoder::QoaDecoder;
 use rp2040_hal::gpio::FunctionPwm;
 use rp2040_hal::pwm;
 use rp2040_hal::{gpio::PullNone, pio::PIOExt, Timer};
+
 #[cfg(feature="audio")]
 use rp2040_hal::multicore;
 
@@ -432,9 +436,7 @@ impl CurrentAudio {
 
 /// Plays the embedded QOA file on the provided PWM pin. This function never returns.
 /// It uses the cortex‑m asm delay (assuming a 125 MHz clock) to wait for the sample period.
-pub fn play_audio<P>(pwm: &mut P, timer: &Timer) -> !
-where
-    P: PwmPin<Duty = u16>,
+pub fn play_audio(pwm: &mut AudioPwm, timer: &Timer) -> !
 {
     // Calculate delay in microseconds per sample.
     const CYCLES_PER_US: u32 = 125; // assuming a 125 MHz clock

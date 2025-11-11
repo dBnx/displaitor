@@ -1,7 +1,7 @@
 [workspace]
 members = [
     "aitos",
-    "aitos-embassy",
+    # "aitos-embassy",
     "displaitor",
     "qoa_decoder",
     "simulaitor",

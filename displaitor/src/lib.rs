@@ -1,7 +1,6 @@
 #![allow(unused)]
 #![no_std]
 #![feature(iter_collect_into)]
-#![feature(generic_arg_infer)]
 
 #[macro_use]
 extern crate alloc;

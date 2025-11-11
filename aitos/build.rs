@@ -22,7 +22,7 @@ fn main() {
         .unwrap()
         .write_all(include_bytes!("memory.x"))
         .unwrap();
-    File::create(out.join("link.ram.x"))
+    File::create(out.join("link.x"))
         .unwrap()
         .write_all(include_bytes!("link.ram.x"))
         .unwrap();
@@ -33,5 +33,5 @@ fn main() {
     // here, we ensure the build script is only re-run when
     // `memory.x` is changed.
     println!("cargo:rerun-if-changed=memory.x");
-    println!("cargo:rerun-if-changed=link.x");
+    println!("cargo:rerun-if-changed=link.ram.x");
 }
