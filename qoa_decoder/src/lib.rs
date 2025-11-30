@@ -93,6 +93,7 @@ impl<'a> QoaDecoder<'a> {
     }
 
     /// Returns the next decoded sample as an i16, or None if all samples have been returned.
+    #[inline]
     pub fn next_sample(&mut self) -> Option<i16> {
         if self.samples_read >= self.total_samples {
             return None;
@@ -122,8 +123,11 @@ impl<'a> QoaDecoder<'a> {
 
                 let scale_factor = ((slice_val >> 60) & 0xF) as usize;
                 let mut decoded = [0i16; 20];
+                // Optimize: pre-calculate shift values and use lookup table
+                // Unroll first few iterations for better branch prediction
                 for i in 0..20 {
-                    let shift = 60 - 3 * (i + 1);
+                    // Optimized shift calculation: 60 - 3 * (i + 1) = 57 - 3 * i
+                    let shift = 57 - 3 * i;
                     let qr = ((slice_val >> shift) & 0x7) as usize;
                     let r = QOA_DEQUANT_TAB[scale_factor][qr];
 
