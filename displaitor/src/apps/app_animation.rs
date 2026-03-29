@@ -88,7 +88,7 @@ where
         } else {
             UpdateResult {
                 render_result,
-                audio_queue_request: Some(self.background_music.clone()),
+                audio_queue_request: Some(self.background_music),
             }
         }
     }

@@ -159,8 +159,12 @@ where
         .into_styled(PrimitiveStyle::with_fill(Self::Color::BLACK))
         .draw(target);
 
-        // Draw paddles
+        // Cache colors - avoid repeated Color trait lookups
         let color1 = Self::Color::CYAN;
+        let color2 = Self::Color::MAGENTA;
+        let color_white = Self::Color::WHITE;
+        
+        // Draw paddles
         let _paddle1 = Rectangle::new(
             Point::new(0, self.paddle1_pos),
             Size::new(self.paddle_width as u32, self.paddle_height as u32),
@@ -168,35 +172,36 @@ where
         .into_styled(PrimitiveStyle::with_fill(color1))
         .draw(target);
 
-        let color2 = Self::Color::MAGENTA;
         let _paddle2 = Rectangle::new(
             Point::new(self.screen_width - self.paddle_width, self.paddle2_pos),
-            Size::new(self.screen_width as u32, self.paddle_height as u32),
+            Size::new(self.paddle_width as u32, self.paddle_height as u32),
         )
         .into_styled(PrimitiveStyle::with_fill(color2))
         .draw(target);
 
-        // Display scores
+        // Display scores - reuse buffer and cache styles
         let mut text_buffer = FixedBuffer::<32>::new();
+        const SCORE_PREFIX_P1: &str = "P1: ";
+        const SCORE_PREFIX_P2: &str = "P2: ";
 
         // - Score 1
         text_buffer.clear();
-        let _ = write!(&mut text_buffer, "P1: {}", self.score1);
-        let score_style = MonoTextStyle::new(&FONT_6X9, color1);
-        let _score = Text::new(text_buffer.as_str(), Point::new(10, 10), score_style).draw(target);
+        let _ = write!(&mut text_buffer, "{}{}", SCORE_PREFIX_P1, self.score1);
+        let score_style1 = MonoTextStyle::new(&FONT_6X9, color1);
+        let _score = Text::new(text_buffer.as_str(), Point::new(10, 10), score_style1).draw(target);
 
         // - Score 2
         text_buffer.clear();
-        let _ = write!(&mut text_buffer, "P2: {}", self.score2);
-        let score_style = MonoTextStyle::new(&FONT_6X9, color2);
-        let _score = Text::new(text_buffer.as_str(), Point::new(10, 20), score_style).draw(target);
+        let _ = write!(&mut text_buffer, "{}{}", SCORE_PREFIX_P2, self.score2);
+        let score_style2 = MonoTextStyle::new(&FONT_6X9, color2);
+        let _score = Text::new(text_buffer.as_str(), Point::new(10, 20), score_style2).draw(target);
 
         // Draw the ball
         let _ball = Rectangle::new(
             self.ball_pos,
             Size::new(self.ball_size as u32, self.ball_size as u32),
         )
-        .into_styled(PrimitiveStyle::with_fill(Self::Color::WHITE))
+        .into_styled(PrimitiveStyle::with_fill(color_white))
         .draw(target);
     }
 
