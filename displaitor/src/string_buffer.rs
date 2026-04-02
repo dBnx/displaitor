@@ -62,6 +62,71 @@ impl<const N: usize> Write for FixedBuffer<N> {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_new_creates_empty_buffer() {
+        let buffer = FixedBuffer::<16>::new();
+        assert_eq!(buffer.as_str(), "");
+    }
+
+    #[test]
+    fn test_write_str_valid() {
+        let mut buffer = FixedBuffer::<16>::new();
+        assert!(buffer.write_str("hello").is_ok());
+        assert_eq!(buffer.as_str(), "hello");
+    }
+
+    #[test]
+    fn test_write_str_multiple() {
+        let mut buffer = FixedBuffer::<16>::new();
+        assert!(buffer.write_str("hello").is_ok());
+        assert!(buffer.write_str(" ").is_ok());
+        assert!(buffer.write_str("world").is_ok());
+        assert_eq!(buffer.as_str(), "hello world");
+    }
+
+    #[test]
+    fn test_write_str_overflow() {
+        let mut buffer = FixedBuffer::<5>::new();
+        assert!(buffer.write_str("hello").is_ok());
+        assert!(buffer.write_str("x").is_err());
+    }
+
+    #[test]
+    fn test_write_str_exact_capacity() {
+        let mut buffer = FixedBuffer::<5>::new();
+        assert!(buffer.write_str("hello").is_ok());
+        assert_eq!(buffer.as_str(), "hello");
+    }
+
+    #[test]
+    fn test_clear() {
+        let mut buffer = FixedBuffer::<16>::new();
+        assert!(buffer.write_str("hello").is_ok());
+        assert_eq!(buffer.as_str(), "hello");
+        buffer.clear();
+        assert_eq!(buffer.as_str(), "");
+    }
+
+    #[test]
+    fn test_clear_then_write() {
+        let mut buffer = FixedBuffer::<16>::new();
+        assert!(buffer.write_str("hello").is_ok());
+        buffer.clear();
+        assert!(buffer.write_str("world").is_ok());
+        assert_eq!(buffer.as_str(), "world");
+    }
+
+    #[test]
+    fn test_as_str_empty() {
+        let buffer = FixedBuffer::<16>::new();
+        assert_eq!(buffer.as_str(), "");
+    }
+}
+
 /*
 use core::fmt::{self, Write};
 use critical_section::Mutex;

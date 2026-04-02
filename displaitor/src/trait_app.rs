@@ -30,14 +30,14 @@ impl AudioID {
         use AudioID::*;
         match self {
             // BootUp => include_bytes!("../assets/audio/boot_up.qoa"),
-            Ping => Some(include_bytes!("../../assets/audio/ping.qoa")),
-            Pong => Some(include_bytes!("../../assets/audio/pong.qoa")),
+            // Ping => Some(include_bytes!("../../assets/audio/ping.qoa")),
+            // Pong => Some(include_bytes!("../../assets/audio/pong.qoa")),
             // Nom => Some(include_bytes!("../../assets/audio/nom.qoa")),
             // GameOver => Some(include_bytes!("../../assets/audio/game_over.qoa")),
             // MusicDepp => Some(include_bytes!("../../assets/audio/music_depp.qoa")),
-            MusicTetris => Some(include_bytes!("../../assets/audio/music_tetris.qoa")),
-            MusicPen => Some(include_bytes!("../../assets/audio/music_ppap.qoa")),
-            MusicNyan => Some(include_bytes!("../../assets/audio/music_nyan_cat.qoa")),
+            // MusicTetris => Some(include_bytes!("../../assets/audio/music_tetris.qoa")),
+            // MusicPen => Some(include_bytes!("../../assets/audio/music_ppap.qoa")),
+            // MusicNyan => Some(include_bytes!("../../assets/audio/music_nyan_cat.qoa")),
             _ => None
         }
     }
@@ -97,5 +97,51 @@ pub trait App {
     /// requesting closure.
     fn close_request(&self) -> bool {
         false
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_update_result_visible_changes() {
+        let result = UpdateResult {
+            render_result: RenderStatus::VisibleChange,
+            audio_queue_request: None,
+        };
+        assert!(result.visible_changes());
+
+        let result = UpdateResult {
+            render_result: RenderStatus::NoVisibleChange,
+            audio_queue_request: None,
+        };
+        assert!(!result.visible_changes());
+    }
+
+    #[test]
+    fn test_update_result_audio_queue_request() {
+        let result = UpdateResult {
+            render_result: RenderStatus::VisibleChange,
+            audio_queue_request: Some(AudioID::Ping),
+        };
+        assert_eq!(result.audio_queue_request(), Some(AudioID::Ping));
+
+        let result = UpdateResult {
+            render_result: RenderStatus::VisibleChange,
+            audio_queue_request: None,
+        };
+        assert_eq!(result.audio_queue_request(), None);
+    }
+
+    #[test]
+    fn test_render_status_conversion_to_update_result() {
+        let result: UpdateResult = RenderStatus::VisibleChange.into();
+        assert!(result.visible_changes());
+        assert_eq!(result.audio_queue_request(), None);
+
+        let result: UpdateResult = RenderStatus::NoVisibleChange.into();
+        assert!(!result.visible_changes());
+        assert_eq!(result.audio_queue_request(), None);
     }
 }

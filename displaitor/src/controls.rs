@@ -30,3 +30,53 @@ impl Controls {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_new_initializes_all_fields() {
+        let controls = Controls::new(
+            true, false, true,
+            false, true, false, true,
+        );
+        assert!(controls.buttons_a);
+        assert!(!controls.buttons_b);
+        assert!(controls.buttons_s);
+        assert!(!controls.dpad_up);
+        assert!(controls.dpad_down);
+        assert!(!controls.dpad_left);
+        assert!(controls.dpad_right);
+    }
+
+    #[test]
+    fn test_new_all_false() {
+        let controls = Controls::new(
+            false, false, false,
+            false, false, false, false,
+        );
+        assert!(!controls.buttons_a);
+        assert!(!controls.buttons_b);
+        assert!(!controls.buttons_s);
+        assert!(!controls.dpad_up);
+        assert!(!controls.dpad_down);
+        assert!(!controls.dpad_left);
+        assert!(!controls.dpad_right);
+    }
+
+    #[test]
+    fn test_new_all_true() {
+        let controls = Controls::new(
+            true, true, true,
+            true, true, true, true,
+        );
+        assert!(controls.buttons_a);
+        assert!(controls.buttons_b);
+        assert!(controls.buttons_s);
+        assert!(controls.dpad_up);
+        assert!(controls.dpad_down);
+        assert!(controls.dpad_left);
+        assert!(controls.dpad_right);
+    }
+}
