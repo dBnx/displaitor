@@ -34,6 +34,7 @@ pub struct FixedBuffer<const N: usize> {
 }
 
 impl<const N: usize> FixedBuffer<N> {
+    #[inline(always)]
     pub const fn new() -> Self {
         Self {
             buffer: [0; N],
@@ -41,23 +42,28 @@ impl<const N: usize> FixedBuffer<N> {
         }
     }
 
+    #[inline(always)]
     pub fn as_str(&self) -> &str {
         core::str::from_utf8(&self.buffer[..self.pos]).unwrap_or("")
     }
 
+    #[inline(always)]
     pub fn clear(&mut self) {
         self.pos = 0;
     }
 }
 
 impl<const N: usize> Write for FixedBuffer<N> {
+    #[inline(always)]
     fn write_str(&mut self, s: &str) -> fmt::Result {
         let bytes = s.as_bytes();
-        if self.pos + bytes.len() > self.buffer.len() {
+        let new_pos = self.pos + bytes.len();
+        // Optimized: single bounds check and calculate new_pos once
+        if new_pos > self.buffer.len() {
             return Err(fmt::Error);
         }
-        self.buffer[self.pos..self.pos + bytes.len()].copy_from_slice(bytes);
-        self.pos += bytes.len();
+        self.buffer[self.pos..new_pos].copy_from_slice(bytes);
+        self.pos = new_pos;
         Ok(())
     }
 }
