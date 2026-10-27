@@ -1,0 +1,30 @@
+name: Offline checks
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: sudo apt-get update && sudo apt-get install -y libsdl2-dev pkg-config python3-venv
+      - run: python3 -m venv .venv && .venv/bin/pip install -r tools/requirements.txt
+      - name: Install isolated pinned Rust toolchain
+        run: |
+          export RUSTUP_HOME="$RUNNER_TEMP/displaitor-rustup"
+          echo "RUSTUP_HOME=$RUSTUP_HOME" >> "$GITHUB_ENV"
+          rustup toolchain install 1.99.0 --profile minimal --component rustfmt --component clippy --target thumbv6m-none-eabi
+      - run: PATH="$PWD/.venv/bin:$PATH" ./scripts/check.sh
+  windows-helper:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: python -m venv .venv
+      - run: .\.venv\Scripts\python.exe -m pip install -r tools\requirements.txt
+      - run: rustup toolchain install 1.99.0 --profile minimal
+      - run: cargo build --locked -p simulaitor --no-default-features
+      - run: .\.venv\Scripts\python.exe -m unittest discover -s tools -p 'test_*.py' -v

@@ -1,0 +1,12 @@
+{
+  "text": {
+    "cpu_label": {"x": 2, "y": 0, "width": 16, "height": 6, "font": "small", "color": "#28D7F7", "text": "CPU"},
+    "cpu": {"x": 22, "y": 0, "width": 16, "height": 6, "font": "small", "align": "right", "color": "#28D7F7", "text": " --%"},
+    "ram_label": {"x": 2, "y": 8, "width": 16, "height": 6, "font": "small", "color": "#AA8CFF", "text": "RAM"},
+    "ram": {"x": 22, "y": 8, "width": 16, "height": 6, "font": "small", "align": "right", "color": "#AA8CFF", "text": " --%"},
+    "gpu_label": {"x": 2, "y": 16, "width": 16, "height": 6, "font": "small", "color": "#FFBA52", "text": "GPU"},
+    "gpu": {"x": 22, "y": 16, "width": 16, "height": 6, "font": "small", "align": "right", "color": "#FFBA52", "text": " --%"},
+    "vram_label": {"x": 2, "y": 24, "width": 16, "height": 6, "font": "small", "color": "#69EF8C", "text": "VRAM"},
+    "vram": {"x": 22, "y": 24, "width": 40, "height": 6, "font": "small", "align": "right", "color": "#69EF8C", "text": "--"}
+  }
+}

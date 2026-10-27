@@ -1,0 +1,20 @@
+[
+  {
+    "character": "cubone",
+    "revision": "97a7832d307311c0e1c6ea9035308bf80cc94f81",
+    "url": "https://raw.githubusercontent.com/PokeAPI/sprites/97a7832d307311c0e1c6ea9035308bf80cc94f81/sprites/pokemon/versions/generation-viii/sword-shield/icons/104.png",
+    "sha256": "53fd006293730fd4f9b297f11a45eae0cdfc89eef916c6b91c6bb383c4c63031"
+  },
+  {
+    "character": "treecko",
+    "revision": "97a7832d307311c0e1c6ea9035308bf80cc94f81",
+    "url": "https://raw.githubusercontent.com/PokeAPI/sprites/97a7832d307311c0e1c6ea9035308bf80cc94f81/sprites/pokemon/versions/generation-viii/sword-shield/icons/252.png",
+    "sha256": "8152c322ede8fc943d182ff2227a574f06a5a7b78b963d14b18e17cb2c8fdff8"
+  },
+  {
+    "character": "torchic",
+    "revision": "97a7832d307311c0e1c6ea9035308bf80cc94f81",
+    "url": "https://raw.githubusercontent.com/PokeAPI/sprites/97a7832d307311c0e1c6ea9035308bf80cc94f81/sprites/pokemon/versions/generation-viii/sword-shield/icons/255.png",
+    "sha256": "c09db95f5da5b79e837072edf4c25160eda73eab8430a862f4dae5f2fd1e4337"
+  }
+]
