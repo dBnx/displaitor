@@ -1,0 +1,7 @@
+{
+  "text": {
+    "title": {"x": 2, "y": 1, "width": 36, "font": "small", "color": "#607078", "background": "#000000", "text": "WEATHER"},
+    "temperature": {"x": 2, "y": 9, "width": 36, "font": "medium", "align": "right", "color": "#B8C8C0", "background": "#000000", "text": "18°C"},
+    "status": {"x": 2, "y": 25, "font": "small", "color": "#607D70", "background": "#000000", "text": "Rain soon"}
+  }
+}

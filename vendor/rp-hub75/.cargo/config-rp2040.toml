@@ -1,0 +1,28 @@
+# RP2040 (Cortex-M0+) build configuration.
+#
+# Selected with `--config .cargo/config-rp2040.toml` (the aliases in
+# `.cargo/config.toml` do this) together with an rp-hal or embassy target feature
+# for this chip. This file, and the memory map it points the linker at, are the
+# chip's; the `-rp2040` feature names the chip and the backend together.
+
+[build]
+target = "thumbv6m-none-eabi"
+
+[target.thumbv6m-none-eabi]
+rustflags = [
+    # The chip's memory map, named `memory.x` for `link.x`'s `INCLUDE memory.x`.
+    # It must precede `-Tlink.x` so the linker's search path holds it in time.
+    "-C", "link-arg=-Lmemory/rp2040",
+    # --nmagic turns off page alignment of sections (saves flash)
+    "-C", "link-arg=--nmagic",
+    # link.x comes from cortex-m-rt, and pulls in memory.x from the path above
+    "-C", "link-arg=-Tlink.x",
+    # defmt.x places the .defmt sections and provides the logger symbols, after
+    # link.x.
+    "-C", "link-arg=-Tdefmt.x",
+    "-C", "target-cpu=cortex-m0plus",
+]
+# The debug probe flashes, runs and carries defmt back over RTT:
+# `cd examples/gradient-latched && cargo run-rp2040`, with a CMSIS-DAP probe
+# attached.
+runner = "probe-rs run --chip RP2040"

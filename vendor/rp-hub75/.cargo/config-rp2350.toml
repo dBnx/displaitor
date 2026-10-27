@@ -1,0 +1,35 @@
+# RP2350 (Cortex-M33) build configuration.
+#
+# Selected with `--config .cargo/config-rp2350.toml` (the aliases in
+# `.cargo/config.toml` do this) together with an rp-hal or embassy target feature
+# for this chip. This file, and the memory map it points the linker at, are the
+# chip's. Cargo appends a `--config` file's `rustflags` to the base config's, so
+# the settings live here and not in `.cargo/config.toml`.
+#
+# The RP2350 has two Cortex-M33 cores, so the default is the hard-float Arm
+# target. A RISC-V (Hazard3) build is possible with
+#   cargo build --config .cargo/config-rp2350.toml --features rphal-rp2350 \
+#     --target riscv32imac-unknown-none-elf
+# which needs -Trp235x_riscv.x instead of -Tlink.x, see the rp-hal examples.
+
+[build]
+target = "thumbv8m.main-none-eabihf"
+
+[target.thumbv8m.main-none-eabihf]
+rustflags = [
+    # The chip's memory map, named `memory.x` for `link.x`'s `INCLUDE memory.x`.
+    # It must precede `-Tlink.x` so the linker's search path holds it in time.
+    "-C", "link-arg=-Lmemory/rp2350",
+    # --nmagic turns off page alignment of sections (saves flash)
+    "-C", "link-arg=--nmagic",
+    # link.x comes from cortex-m-rt, and pulls in memory.x from the path above
+    "-C", "link-arg=-Tlink.x",
+    # defmt.x places the .defmt sections and provides the logger symbols. defmt's
+    # own build script only adds the search path for this script; passing it is
+    # the application's job, and it has to come after link.x.
+    "-C", "link-arg=-Tdefmt.x",
+    "-C", "target-cpu=cortex-m33",
+]
+# The debug probe flashes, runs and carries defmt back over RTT in one step:
+# `cargo run-rp2350 --example gradient`, with the CMSIS-DAP probe attached.
+runner = "probe-rs run --chip RP235x"

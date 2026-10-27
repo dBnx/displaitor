@@ -1,108 +1,195 @@
-use displaitor::{App, Controls};
+use aitos::input::Debouncer;
+use core::convert::Infallible;
+use displaitor::{AppId, Controls, DEFAULT_MENU_COUNT, Engine, HEIGHT, Screen, WIDTH};
 use embedded_graphics::{pixelcolor::Rgb565, prelude::*};
-use embedded_graphics_simulator::{
-    sdl2::Keycode, OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window,
-};
-use std::{
-    thread::sleep,
-    time::{Duration, Instant},
-};
+use std::time::Duration;
 
-const SCREEN_HEIGHT: u32 = 32;
-const SCREEN_WIDTH: u32 = 64;
+mod canvas_link;
+#[cfg(feature = "sdl")]
+mod desktop;
+mod framebuffer;
 
-fn main() -> Result<(), core::convert::Infallible> {
-    let mut app = displaitor::main_app();
-    run_app(&mut app);
+use framebuffer::Framebuffer;
+
+fn main() -> Result<(), String> {
+    let mut headless = false;
+    let mut frames: Option<u32> = None;
+    let mut smoke = false;
+    let mut canvas_address = None;
+    let mut snapshot = None;
+    let mut arguments = std::env::args().skip(1);
+    while let Some(argument) = arguments.next() {
+        match argument.as_str() {
+            "--canvas-listen" => {
+                canvas_address = Some(arguments.next().ok_or("--canvas-listen requires IP:port")?)
+            }
+            "--snapshot" => {
+                snapshot = Some(arguments.next().ok_or("--snapshot requires a PPM path")?)
+            }
+            "--headless" => headless = true,
+            "--smoke" => {
+                headless = true;
+                smoke = true;
+            }
+            "--frames" => {
+                frames = Some(
+                    arguments
+                        .next()
+                        .ok_or("--frames requires a count")?
+                        .parse()
+                        .map_err(|_| "--frames requires an unsigned integer")?,
+                );
+            }
+            "--help" | "-h" => {
+                println!(
+                    "simulaitor [--headless | --smoke] [--frames N] [--canvas-listen 127.0.0.1:7777] [--snapshot frame.ppm]\n\nW/S/A/D: directions; Space: A/select; Q: B/back; R: mute on release\nEscape: quit. --smoke exercises every application without SDL or audio.\n--canvas-listen locally opens Canvas. Headless Canvas runs in real time."
+                );
+                return Ok(());
+            }
+            _ => return Err(format!("unknown argument: {argument}")),
+        }
+    }
+    if smoke && canvas_address.is_some() {
+        return Err("--smoke and --canvas-listen are separate modes".into());
+    }
+    if snapshot.is_some() && !headless {
+        return Err("--snapshot requires --headless".into());
+    }
+    let link = canvas_address
+        .as_deref()
+        .map(canvas_link::CanvasLink::bind)
+        .transpose()?;
+    if headless {
+        return run_headless(frames.unwrap_or(600), smoke, link, snapshot.as_deref());
+    }
+    #[cfg(feature = "sdl")]
+    {
+        desktop::run(frames, link)
+    }
+    #[cfg(not(feature = "sdl"))]
+    {
+        Err("desktop support is disabled; use --headless or build with --features sdl".into())
+    }
+}
+
+fn render(engine: &Engine, framebuffer: &mut Framebuffer) {
+    framebuffer.clear(Rgb565::BLACK).unwrap();
+    let result: Result<(), Infallible> = engine.render(framebuffer);
+    result.unwrap();
+}
+
+fn run_headless(
+    frames: u32,
+    smoke: bool,
+    mut link: Option<canvas_link::CanvasLink>,
+    snapshot: Option<&str>,
+) -> Result<(), String> {
+    if frames == 0 {
+        return Err("--frames must be greater than zero".into());
+    }
+    let mut engine = Engine::new();
+    if link.is_some() {
+        let _ = engine.open_canvas();
+    }
+    let mut framebuffer = Framebuffer::new();
+    if smoke && frames < 390 {
+        return Err("--smoke requires at least 390 frames".into());
+    }
+    let mut debounce = Debouncer::default();
+    let mut visited = [false; 1 + DEFAULT_MENU_COUNT + AppId::COUNT];
+    let mut redraws = 0;
+    let mut audio_requests = 0;
+    let mut checksum = 0_u64;
+    render(&engine, &mut framebuffer);
+    let mut saw_visible_pixels = framebuffer.has_visible_pixels();
+    for frame in 0..frames {
+        if let Some(link) = &mut link {
+            link.service(&mut engine)?;
+        }
+        let controls = if smoke {
+            smoke_input(frame)
+        } else {
+            Controls::default()
+        };
+        let controls = debounce.update(Duration::from_millis(10), controls);
+        let update = engine.update(Duration::from_millis(10), controls);
+        visited[screen_index(engine.screen())] = true;
+        audio_requests += u32::from(update.audio.is_some());
+        if update.redraw {
+            render(&engine, &mut framebuffer);
+            saw_visible_pixels |= framebuffer.has_visible_pixels();
+            redraws += 1;
+            checksum = checksum.rotate_left(7) ^ framebuffer.checksum();
+        }
+        if link.is_some() {
+            std::thread::sleep(Duration::from_millis(10));
+        }
+    }
+    if redraws == 0 || (!saw_visible_pixels && link.is_none()) {
+        return Err("headless rendering did not produce a visible frame".into());
+    }
+    if smoke {
+        for menu in 0..DEFAULT_MENU_COUNT {
+            if !visited[1 + menu] {
+                return Err(format!("smoke did not visit menu {menu}"));
+            }
+        }
+        for screen in
+            core::iter::once(Screen::Splash).chain(AppId::ALL.iter().copied().map(Screen::App))
+        {
+            if !visited[screen_index(screen)] {
+                return Err(format!("smoke did not visit {screen:?}"));
+            }
+        }
+    }
+    if let Some(path) = snapshot {
+        framebuffer.write_ppm(path)?;
+    }
+    println!(
+        "{WIDTH}x{HEIGHT}: frames={frames} redraws={redraws} audio_requests={audio_requests} checksum={checksum:016x} screen={:?}",
+        engine.screen()
+    );
     Ok(())
 }
 
-pub fn run_app<T>(app: &mut T)
-where
-    T: App<Target = SimulatorDisplay<Rgb565>, Color = Rgb565>,
-{
-    let mut display = SimulatorDisplay::<Rgb565>::new(Size::new(SCREEN_WIDTH, SCREEN_HEIGHT));
-    let output_settings = OutputSettingsBuilder::new()
-        // .theme(BinaryColorTheme::OledBlue)
-        .scale(4)
-        .pixel_spacing(4)
-        .build();
-
-    let mut window = Window::new("Displaitor Simulator", &output_settings);
-
-    // Timer for controlling the game loop
-    // let mut timer = SimulatorTimer::new(Duration::from_millis(16)); // ~60 FPS
-
-    // Initialize the app
-    // app.setup();
-
-    // Game loop
-    let mut last_time = Instant::now();
-    let mut elapsed_time = 0; // Elapsed time in milliseconds
-    let mut controls = Controls {
-        buttons_a: false,
-        buttons_b: false,
-        buttons_s: false,
-        dpad_up: false,
-        dpad_down: false,
-        dpad_left: false,
-        dpad_right: false,
+fn smoke_input(frame: u32) -> Controls {
+    // Every press spans three 10 ms updates, followed by at least 70 ms released.
+    // Skip splash, open menu, animations and each child, then games.
+    let mut controls = Controls::default();
+    let button = match frame {
+        5..=7
+        | 20..=22
+        | 100..=102
+        | 150..=152
+        | 200..=202
+        | 220..=222
+        | 290..=292
+        | 350..=352
+        | 360..=362 => 1,
+        30..=32 | 110..=112 | 160..=162 | 230..=232 | 300..=302 | 370..=372 => 2,
+        40..=42
+        | 70..=72
+        | 120..=122
+        | 170..=172
+        | 240..=242
+        | 250..=252
+        | 320..=322
+        | 380..=382 => 3,
+        _ => 0,
     };
-
-    'game_loop: loop {
-        // Calculate elapsed time
-        let now = Instant::now();
-        let dt = now.duration_since(last_time).as_micros() as i64;
-        elapsed_time += dt;
-        last_time = now;
-
-        // Update the app
-        let update_result = app.update(dt, elapsed_time, &controls);
-
-        if update_result.visible_changes() {
-            // Clear the display
-            display.clear(Rgb565::BLACK).unwrap();
-
-            // Render the app
-            app.render(&mut display);
-
-            // Update the window
-            window.update(&display);
-        }
-
-        // Handle events
-        for event in window.events() {
-            match event {
-                SimulatorEvent::Quit => break 'game_loop,
-                SimulatorEvent::KeyUp { keycode, .. } => match keycode {
-                    Keycode::W => controls.dpad_up = false,
-                    Keycode::S => controls.dpad_down = false,
-                    Keycode::A => controls.dpad_left = false,
-                    Keycode::D => controls.dpad_right = false,
-                    Keycode::Space => controls.buttons_a = false,
-                    Keycode::Q => controls.buttons_b = false,
-                    Keycode::R => controls.buttons_s = false,
-                    _ => {}
-                },
-                SimulatorEvent::KeyDown { keycode, .. } => match keycode {
-                    Keycode::W => controls.dpad_up = true,
-                    Keycode::S => controls.dpad_down = true,
-                    Keycode::A => controls.dpad_left = true,
-                    Keycode::D => controls.dpad_right = true,
-                    Keycode::Space => controls.buttons_a = true,
-                    Keycode::Q => controls.buttons_b = true,
-                    Keycode::R => controls.buttons_s = true,
-                    _ => {}
-                },
-                _ => {}
-            }
-        }
-
-        // Wait for the next frame
-        // timer.wait();
-        sleep(Duration::from_millis(10));
+    match button {
+        1 => controls.buttons_b = true,
+        2 => controls.dpad_down = true,
+        3 => controls.buttons_a = true,
+        _ => {}
     }
+    controls
+}
 
-    // Cleanup
-    app.teardown();
+fn screen_index(screen: Screen) -> usize {
+    match screen {
+        Screen::Splash => 0,
+        Screen::Menu(id) => 1 + id.index(),
+        Screen::App(id) => 1 + DEFAULT_MENU_COUNT + id as usize,
+    }
 }

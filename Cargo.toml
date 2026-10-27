@@ -1,11 +1,28 @@
 [workspace]
-members = [
-    "aitos",
-    "displaitor", "qoa_decoder",
-    "simulaitor",
-]
-resolver = "2"
+members = ["aitos", "displaitor", "qoa_decoder", "simulaitor"]
+default-members = ["displaitor", "qoa_decoder"]
+exclude = ["vendor/rp-hub75"]
+resolver = "3"
+
+[workspace.package]
+edition = "2024"
+rust-version = "1.99"
+license = "MIT OR Apache-2.0"
 
 [workspace.dependencies]
-embedded-error-chain = "^1.0"
-embedded-graphics = "^0.8"
+embedded-graphics = "0.8.2"
+
+[profile.dev]
+opt-level = 1
+
+[profile.release]
+codegen-units = 1
+lto = "fat"
+opt-level = 3
+debug = 2
+panic = "abort"
+overflow-checks = true
+
+[patch.crates-io]
+# Pinned 0.1.1 with the RP2040 Embassy raw DMA interrupt-bank correction.
+rp-hub75 = { path = "vendor/rp-hub75" }

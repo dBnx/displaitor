@@ -1,0 +1,99 @@
+[package]
+authors = ["liebman <liebman@zod.com>"]
+categories = ["embedded", "hardware-support", "no-std"]
+description = "A HUB75 LED matrix driver for RP2040 and RP2350 (Pimoroni Interstate 75 W)"
+documentation = "https://docs.rs/rp-hub75"
+edition = "2024"
+keywords = ["hub75", "rp2040", "rp2350", "led-matrix", "embedded"]
+license = "MIT OR Apache-2.0"
+name = "rp-hub75"
+repository = "https://github.com/liebman/rp-hub75"
+rust-version = "1.85"
+version = "0.1.1"
+
+[lib]
+name = "rp_hub75"
+
+[features]
+rphal-rp2040 = ["dep:rp2040-hal"]
+rphal-rp2350 = ["dep:rp235x-hal"]
+embassy-rp2040 = ["dep:embassy-rp", "embassy-rp/rp2040"]
+embassy-rp2350 = ["dep:embassy-rp", "embassy-rp/rp235xa"]
+
+invert-clock = []
+
+invert-oe = ["hub75-framebuffer/invert-oe"]
+skip-black-pixels = ["hub75-framebuffer/skip-black-pixels"]
+tail-closes-latch = ["hub75-framebuffer/tail-closes-latch"]
+lead-blank-1 = ["hub75-framebuffer/lead-blank-1"]
+lead-blank-2 = ["hub75-framebuffer/lead-blank-2"]
+lead-blank-4 = ["hub75-framebuffer/lead-blank-4"]
+lead-blank-8 = ["hub75-framebuffer/lead-blank-8"]
+lead-blank-16 = ["hub75-framebuffer/lead-blank-16"]
+lead-blank-32 = ["hub75-framebuffer/lead-blank-32"]
+trail-blank-1 = ["hub75-framebuffer/trail-blank-1"]
+trail-blank-2 = ["hub75-framebuffer/trail-blank-2"]
+trail-blank-4 = ["hub75-framebuffer/trail-blank-4"]
+trail-blank-8 = ["hub75-framebuffer/trail-blank-8"]
+trail-blank-16 = ["hub75-framebuffer/trail-blank-16"]
+trail-blank-32 = ["hub75-framebuffer/trail-blank-32"]
+
+inter-row-blank-4 = ["hub75-framebuffer/inter-row-blank-4"]
+inter-row-blank-8 = ["hub75-framebuffer/inter-row-blank-8"]
+inter-row-blank-16 = ["hub75-framebuffer/inter-row-blank-16"]
+inter-row-blank-32 = ["hub75-framebuffer/inter-row-blank-32"]
+
+reverse-row-order = ["hub75-framebuffer/reverse-row-order"]
+
+# docs.rs builds with the same crate defaults as any other consumer, and the
+# crate has no default target feature: without naming one, the backend selection
+# in `src/backend/mod.rs` has nothing to read. The rp2350 rp-hal backend is the
+# reference wiring the examples document.
+[package.metadata.docs.rs]
+features = ["rphal-rp2350"]
+
+[dependencies]
+critical-section = "1.2"
+cortex-m = "0.7"
+embedded-graphics = "0.8.2"
+portable-atomic = { version = "1", default-features = false }
+hub75-framebuffer = { version = "0.13.0", features = ["interstate75"] }
+pio = "0.3"
+embassy-rp = { version = "0.10", optional = true, default-features = false, features = ["unstable-pac"] }
+static_cell = "2.1"
+
+[profile.dev]
+debug = true
+opt-level = "s"
+
+[profile.release]
+debug = true
+opt-level = "s"
+
+# --- Target-specific dependencies --------------------------------------------
+#
+# The host entry keeps the library buildable for the host tests and `cargo doc`;
+# `not(target_os = "none")` is true only off bare metal, so a chip build does not
+# match it. The quoted key: `thumbv8m.main` contains a dot TOML would nest.
+[target.'cfg(not(target_os = "none"))'.dependencies]
+rp235x-hal = { version = "0.4.0", optional = true, features = [
+    "binary-info",
+    "critical-section-impl",
+    "rt",
+] }
+
+# A chip build names the HAL's types only; the features a *binary* needs are in
+# each example package.
+[target."thumbv8m.main-none-eabihf".dependencies]
+rp235x-hal = { version = "0.4.0", optional = true }
+
+[target.thumbv6m-none-eabi.dependencies]
+rp2040-hal = { version = "0.12.0", optional = true }
+# Cortex-M0+ has no compare-and-swap, so `portable-atomic` emulates one in a
+# critical section.
+portable-atomic = { version = "1", default-features = false, features = [
+    "critical-section",
+] }
+
+# [patch.crates-io]
+# hub75-framebuffer = { path = "../hub75-framebuffer" }

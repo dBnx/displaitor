@@ -1,0 +1,3 @@
+# Offline ELF inspection and Cortex-M0+ startup instruction emulation.
+pyelftools==0.33
+unicorn==2.1.4

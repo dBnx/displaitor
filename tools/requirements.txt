@@ -1,0 +1,3 @@
+Pillow>=12.0.0,<14
+pyserial>=3.5,<4
+psutil>=7,<9
