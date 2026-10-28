@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Pixel Companion design studies: actual 64x32 sprites and Canvas text.
 
-Preview all three locally, or stream live activity through the Canvas interface.
+Preview all designs locally, or stream live activity through the Canvas interface.
 Exported previews use labelled fixtures; device operation defaults to real readings.
 """
 from __future__ import annotations
@@ -16,30 +16,37 @@ from PIL import Image, ImageDraw
 
 try:
     from .canvas import Client, image_frame
+    from .companion_pokemon import COLORS as POKEMON, ACTION_SECONDS, sprite as pokemon_sprite
+    from .companion_stats import fields as stats_fields
 except ImportError:
     from canvas import Client, image_frame
+    from companion_pokemon import COLORS as POKEMON, ACTION_SECONDS, sprite as pokemon_sprite
+    from companion_stats import fields as stats_fields
 
 ROOT = Path(__file__).resolve().parents[1]
-DESIGNS = {"orbit": "#79ECF0", "ember": "#FFAC72", "sprout": "#96E8A0"}
+DESIGNS = {"orbit": "#79ECF0", "ember": "#FFAC72", "sprout": "#96E8A0", **POKEMON}
 FRAMES = 16
 
 
-def layout(design):
+def layout(design, page="cpu"):
     color = DESIGNS[design]
+    # Long names reserve a blank cell, clear of the panel's edge.
+    # Numeric/status slots retain exactly the same positions and widths.
+    name_width = (len(design) + 1) * 4 if len(design) > 6 else 24
     return {"text": {
-        "name": dict(x=40, y=0, width=24, height=6, font="small", color=color, text=design.upper()),
-        "metric": dict(x=40, y=8, width=24, height=10, font="medium", align="right", color="#FFFFFF", text="42%"),
-        "mood": dict(x=40, y=20, width=24, height=6, font="small", color=color, text="IDLE"),
-        "demo": dict(x=40, y=26, width=24, height=6, font="small", color="#505860", text="DEMO"),
+        "name": dict(x=64 - name_width, y=0, width=name_width, height=6, font="small", color=color, text=design.upper()),
+        **stats_fields(color, page),
     }}
 
 
-def sprite(design, frame, activity="idle", *, hop=0):
+def sprite(design, frame, activity="idle", *, hop=0, action=None):
     """Whole-pixel art; the right 24 columns stay black for retained text."""
     if design not in DESIGNS:
         raise ValueError("unknown companion design")
     if activity not in ("idle", "busy", "hard", "unknown"):
         raise ValueError("unknown companion activity")
+    if design in POKEMON:
+        return pokemon_sprite(design, frame, activity, hop=hop, action=action)
     image = Image.new("RGB", (64, 32), "black")
     draw = ImageDraw.Draw(image)
     phase = frame % FRAMES
@@ -173,12 +180,22 @@ def quantized(image):
     return result
 
 
+def preview_frame(image, rendered, design, page="cpu"):
+    """Retain each real text box, including names wider than the right HUD."""
+    image = quantized(image)
+    for slot in layout(design, page)["text"].values():
+        x, y = slot["x"], slot["y"]
+        area = (x, y, x + slot["width"], y + slot["height"])
+        image.paste(rendered.crop(area), (x, y))
+    return image
+
+
 def sprite_sheets(directory):
-    """All native 40x32 character frames: 16 columns and nine activity rows."""
+    """All native 40x32 character frames: 16 columns, three rows per pet."""
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
     raw = Image.new("RGB", (40 * FRAMES, 32 * len(DESIGNS) * 3), "black")
-    labelled = Image.new("RGB", (1416, 744), "#0C0C0C")
+    labelled = Image.new("RGB", (1416, 24 + len(DESIGNS) * 3 * 80), "#0C0C0C")
     labels = ImageDraw.Draw(labelled)
     for frame in range(FRAMES):
         labels.text((128 + frame * 80, 5), str(frame), fill="#B4B4B4")
@@ -205,7 +222,7 @@ def previews(directory):
     binary = ROOT / ("target/debug/simulaitor.exe" if sys.platform == "win32" else "target/debug/simulaitor")
     if not binary.exists():
         raise RuntimeError("build the simulator first: cargo build -p simulaitor --no-default-features")
-    sheet = Image.new("RGB", (1184, 224), "#0C0C0C")
+    sheet = Image.new("RGB", (1184, math.ceil(len(DESIGNS) / 3) * 224), "#0C0C0C")
     labels = ImageDraw.Draw(sheet)
     for index, design in enumerate(DESIGNS):
         snapshot = directory / (design + ".ppm")
@@ -231,16 +248,13 @@ def previews(directory):
             still = image.convert("RGB")
         still.save(directory / (design + ".png"))
         animation = []
-        hud = still.crop((40, 0, 64, 32))
         for frame in range(FRAMES):
-            image = quantized(sprite(design, frame))
-            image.paste(hud, (40, 0))
-            animation.append(image)
+            animation.append(preview_frame(sprite(design, frame), still, design))
         animation[0].save(directory / (design + ".gif"), save_all=True, append_images=animation[1:],
                           duration=125, loop=0, disposal=2, optimize=False)
-        x = 8 + index * 392
-        labels.text((x, 3), design.upper(), fill="#B4B4B4")
-        sheet.paste(still.resize((384, 192), Image.Resampling.NEAREST), (x, 24))
+        x, y = 8 + index % 3 * 392, index // 3 * 224
+        labels.text((x, y + 3), design.upper(), fill="#B4B4B4")
+        sheet.paste(still.resize((384, 192), Image.Resampling.NEAREST), (x, y + 24))
         snapshot.unlink()
     sheet.save(directory / "designs.png")
 
@@ -250,7 +264,7 @@ def main():
         "Port mode also accepts pixel_companion.py options, including --gpu, --load and --demo-load.")
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--preview-dir", help="export all designs locally using the Rust simulator")
-    mode.add_argument("--sprite-sheet-dir", help="export all 144 character frames locally; no simulator or device")
+    mode.add_argument("--sprite-sheet-dir", help="export all character frames locally; no simulator or device")
     mode.add_argument("--port", help="auto (native USB only), serial device, or tcp://127.0.0.1:7777")
     parser.add_argument("--design", choices=DESIGNS, default="orbit")
     parser.add_argument("--fps", type=float, default=8)

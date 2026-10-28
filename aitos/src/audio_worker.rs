@@ -22,12 +22,12 @@ fn take_commands() -> (Option<AudioId>, bool) {
     critical_section::with(|cs| COMMANDS.borrow(cs).borrow_mut().take())
 }
 fn apply(player: &mut OutputPlayer, (clip, enabled): (Option<AudioId>, bool)) {
+    player.set_enabled(enabled);
     if let Some(clip) = clip
         && player.select(clip).is_err()
     {
         defmt::error!("Invalid audio asset");
     }
-    player.set_enabled(enabled);
 }
 
 #[embassy_executor::task]

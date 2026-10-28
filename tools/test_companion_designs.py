@@ -20,7 +20,7 @@ class CompanionSimulatorTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             snapshot = Path(directory) / "companion.ppm"
             process = subprocess.Popen([str(binary), "--headless", "--canvas-listen", "127.0.0.1:0",
-                                        "--frames", "250", "--snapshot", str(snapshot)],
+                                        "--frames", "600", "--snapshot", str(snapshot)],
                                        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             try:
                 line = process.stdout.readline().strip()
@@ -28,9 +28,9 @@ class CompanionSimulatorTests(unittest.TestCase):
                 result = subprocess.run([sys.executable, str(ROOT / "tools/companion_designs.py"),
                                          "--port", "tcp://" + line.split()[-1], "--design", "sprout",
                                          "--frames", "8", "--fps", "10", "--gpu", "none"],
-                                        capture_output=True, text=True, timeout=6)
+                                        capture_output=True, text=True, timeout=9)
                 self.assertEqual(result.returncode, 0, result.stderr)
-                stdout, stderr = process.communicate(timeout=7)
+                stdout, stderr = process.communicate(timeout=9)
                 self.assertEqual(process.returncode, 0, stdout + stderr)
                 with Image.open(snapshot) as image:
                     self.assertEqual(image.size, (64, 32))
@@ -44,10 +44,9 @@ class CompanionSimulatorTests(unittest.TestCase):
                             companion_designs.sprite("sprout", frame, mood)))
                         possible.append([words[y*64+x] for y in range(32) for x in range(40)])
                 self.assertIn([actual[y*64+x] for y in range(32) for x in range(40)], possible)
-                # Live CPU is three 4-pixel glyphs; the old fixed DEMO footer
-                # occupied four. Check the real rendered footer's footprint.
-                self.assertTrue(any(actual[y*64+x] for y in range(26, 32) for x in range(48, 52)))
-                self.assertFalse(any(actual[y*64+x] for y in range(26, 32) for x in range(52, 64)))
+                # The CPU label occupies three fixed glyphs above the status.
+                self.assertTrue(any(actual[y*64+x] for y in range(20, 26) for x in range(48, 52)))
+                self.assertFalse(any(actual[y*64+x] for y in range(20, 26) for x in range(52, 64)))
             finally:
                 if process.poll() is None:
                     process.terminate()

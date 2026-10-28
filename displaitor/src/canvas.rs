@@ -10,7 +10,7 @@ use embedded_graphics::{
     text::{Baseline, Text},
 };
 
-use crate::{HEIGHT, WIDTH};
+use crate::{AudioId, HEIGHT, WIDTH};
 
 pub const MAX_SLOTS: usize = 8;
 pub const MAX_TEXT: usize = 64;
@@ -90,6 +90,8 @@ pub struct Canvas {
     changed: bool,
     deferred_show: bool,
     show_ready: bool,
+    deferred_audio: Option<AudioId>,
+    audio_ready: Option<AudioId>,
     dirty: bool,
 }
 
@@ -110,6 +112,8 @@ impl Canvas {
             changed: false,
             deferred_show: false,
             show_ready: false,
+            deferred_audio: None,
+            audio_ready: None,
             dirty: true,
         }
     }
@@ -147,6 +151,9 @@ impl Canvas {
     pub(crate) fn take_show_request(&mut self) -> bool {
         core::mem::take(&mut self.show_ready)
     }
+    pub(crate) fn take_audio_request(&mut self) -> Option<AudioId> {
+        self.audio_ready.take()
+    }
     pub(crate) fn fail_transaction(&mut self) {
         self.failed |= self.transaction;
     }
@@ -158,6 +165,8 @@ impl Canvas {
         self.changed = false;
         self.deferred_show = false;
         self.show_ready = false;
+        self.deferred_audio = None;
+        self.audio_ready = None;
     }
 
     /// Commands 7/8/9 begin, commit and abort a logical scene update.
@@ -188,11 +197,26 @@ impl Canvas {
                 core::mem::swap(&mut self.visible, &mut self.staged);
                 self.dirty |= self.changed;
                 self.show_ready = self.deferred_show;
+                self.audio_ready = self.deferred_audio.take();
                 self.transaction = false;
                 self.changed = false;
                 self.deferred_show = false;
             }
             9 => self.abort_transaction(),
+            11 => {
+                if self.failed {
+                    return Err(Error::Transaction);
+                }
+                let [id] = payload else {
+                    return Err(Error::Value);
+                };
+                let clip = AudioId::canvas_cry(*id).ok_or(Error::Value)?;
+                if self.transaction {
+                    self.deferred_audio = Some(clip);
+                } else {
+                    self.audio_ready = Some(clip);
+                }
+            }
             6 => {
                 if self.failed {
                     return Err(Error::Transaction);

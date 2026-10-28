@@ -1,7 +1,7 @@
 # App ideas
 
 These are candidates, except Pixel Companion, which now has a runnable
-[CPU/GPU-driven sender and three characters](PIXEL-COMPANION.md). Standalone apps are useful while
+[CPU/GPU-driven sender and six characters](PIXEL-COMPANION.md). Standalone apps are useful while
 native USB is unavailable; Canvas ideas can first run against the simulator.
 Use black behind text, sparse bright pixels and dim supporting details. Keep B
 as Back and Select as mute. Every animation needs fixed storage and bounded work.

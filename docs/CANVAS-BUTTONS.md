@@ -45,8 +45,11 @@ respect `active` and avoid calling `show()` in response to a stale event. Scene
 updates may continue in the background while the user is in another local app.
 
 The live companion polls once per animation update. Left/Right cycle Orbit,
-Ember and Sprout; A makes the current pet hop briefly while its percentage remains
-a real CPU/GPU reading. Switching pets does not issue Show, preserving a Back
+Ember, Sprout, Torchic, Eevee and Treecko. A triggers the selected pet's hop or
+trick, with an original handheld-style cry for Torchic, Eevee and Treecko.
+Up/Down cycle CPU, RAM, GPU, used VRAM and a four-row overview. Readings remain
+real regardless of the selected pet or action. Switching pets or pages does not
+issue Show, preserving a Back
 that arrives after the host's last button poll. `--no-buttons` disables these
 actions. Older firmware is detected once per connection and continues displaying
 live metrics without button actions, with a clear update message.
@@ -79,3 +82,34 @@ and the zero delimiter are unchanged. The maximum decoded response is 60 bytes,
 ordinary 17-byte decoded ACK format; unsupported older firmware returns status 3.
 Buttons are separate from staged scene data and remain readable inside a scene
 transaction. Transport resets abort staging without erasing the history.
+
+
+## Companion sound extension
+
+`Client.cry("torchic")`, `cry("eevee")`, `cry("treecko")` and `cry("stop")` select
+bundled one-shot effects through command **11**, with one byte: 0 stop, 1 Torchic,
+2 Eevee, 3 Treecko. Other values or lengths are rejected. The ordinary ACK format
+is unchanged. This narrow API accepts no arbitrary files or remote music IDs.
+
+Effects only play while Canvas is active; the command never opens Canvas.
+Local Back wins over a queued effect. In a scene transaction, effects are deferred
+until successful Commit; Abort, failed staging and transport reset discard them.
+At most one effect is pending, with the latest valid request winning. Muted cries
+are discarded; unmuting does not replay them. A repeated valid request restarts
+from the beginning. Acknowledgement confirms acceptance, not audible completion.
+
+The companion sends sound after its scene commit, allowing an older board to
+reject command 11 without poisoning the drawing transaction. The SDK reports
+unsupported firmware with `NotImplementedError`; the companion then disables
+sound and continues its display updates. A lost ACK closes the connection and
+the companion consumes the pending cry, so reconnect never retries it. `--no-sound`
+disables cries; `--no-buttons` disables all host input actions.
+
+For a single-client audition on connected, updated firmware:
+
+```sh
+python tools/canvas.py --port YOUR-DEVICE cry torchic
+```
+
+Canvas must already be the active local app. See [the original synthesis and
+asset checks](../assets/audio/CRIES.md) and [companion previews](PIXEL-COMPANION.md).
