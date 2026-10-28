@@ -1,6 +1,18 @@
 use qoa_decoder::QoaDecoder;
 
 const AUDIO_ASSETS: &[(&str, &[u8])] = &[
+    (
+        "cry_torchic.qoa",
+        include_bytes!("../../assets/audio/cry_torchic.qoa"),
+    ),
+    (
+        "cry_eevee.qoa",
+        include_bytes!("../../assets/audio/cry_eevee.qoa"),
+    ),
+    (
+        "cry_treecko.qoa",
+        include_bytes!("../../assets/audio/cry_treecko.qoa"),
+    ),
     ("ping.qoa", include_bytes!("../../assets/audio/ping.qoa")),
     ("pong.qoa", include_bytes!("../../assets/audio/pong.qoa")),
     (

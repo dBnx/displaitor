@@ -27,6 +27,9 @@ ERRORS = {1: "invalid packet", 2: "unsupported protocol version", 3: "unknown co
           6: "text must be printable Latin-1, at most 64 UTF-8 bytes",
           7: "Canvas transaction failed; abort before retrying"}
 BUTTON_NAMES = ("a", "b", "select", "up", "down", "left", "right")
+CRIES = {"stop": 0, "torchic": 1, "eevee": 2, "treecko": 3}
+# Keep Windows COM reads short without shortening the whole ACK deadline.
+SERIAL_READ_TIMEOUT = .05
 
 
 def _held(state: int) -> frozenset[str]:
@@ -221,7 +224,8 @@ class Client:
                 import serial
             except ImportError as error:
                 raise RuntimeError("serial support needs: pip install -r tools/requirements.txt") from error
-            self._connection = serial.Serial(target, baudrate=baudrate, timeout=timeout, write_timeout=timeout)
+            self._connection = serial.Serial(target, baudrate=baudrate,
+                                             timeout=min(timeout, SERIAL_READ_TIMEOUT), write_timeout=timeout)
         try:
             self._write(b"\0")  # discard any incomplete request from a previous session
             self.info = self._request(9)  # abort staging retained by an undetected serial reopen
@@ -332,10 +336,12 @@ class Client:
                 if not byte:
                     raise ConnectionError("Canvas disconnected")
             else:
-                self._connection.timeout = remaining
+                self._connection.timeout = min(remaining, SERIAL_READ_TIMEOUT)
                 byte = self._connection.read(1)
                 if not byte:
-                    raise TimeoutError("Canvas did not acknowledge; reconnect before retrying")
+                    # A COM read can time out between USB packets. Keep partial
+                    # replies and wait until the shared deadline above expires.
+                    continue
             if byte != b"\0":
                 # Button reports contain at most four nine-byte events. Retain
                 # a fixed bound even when a peer never sends a delimiter.
@@ -375,6 +381,8 @@ class Client:
             version, opcode, sequence, status, width, height, slots, text_limit, layout_id = struct.unpack("<BBH5BI", reply[:-4])
             if status == 3 and command == 10:
                 raise NotImplementedError("firmware update required: this board does not support Canvas buttons")
+            if status == 3 and command == 11:
+                raise NotImplementedError("firmware update required: this board does not support companion cries")
             if status == 3 and command in (7, 8, 9):
                 raise RuntimeError("firmware update required: this board does not support Canvas transactions")
             if status:
@@ -456,6 +464,13 @@ class Client:
             if len(rgb565) != WIDTH * HEIGHT * 2:
                 raise ValueError("raw frames must contain exactly 4096 little-endian RGB565 bytes")
             self._request(1, rgb565)
+
+    def cry(self, name):
+        """Play one bundled effect while Canvas is active; no retry on lost ACK."""
+        if name not in CRIES:
+            raise ValueError("cry must be stop, torchic, eevee or treecko")
+        with self._operation():
+            self._request(11, bytes([CRIES[name]]))
 
     def background(self, path, *, fit: str = "contain"):
         with self._operation():
@@ -556,6 +571,8 @@ def main():
     buttons = commands.add_parser("buttons", help="read physical button state and transitions")
     buttons.add_argument("--watch", action="store_true", help="poll every 50 ms and print changes")
     commands.add_parser("show", help="switch to Canvas once (requires current firmware)")
+    cry = commands.add_parser("cry", help="play a bundled companion cry; Canvas must already be active")
+    cry.add_argument("name", choices=CRIES)
     layout = commands.add_parser("layout", help="replace the layout and initial text")
     layout.add_argument("path")
     text = commands.add_parser("text", help="update one named text box; empty string clears it")
@@ -592,6 +609,7 @@ def main():
                             break
                         time.sleep(.05)
                 case "show": client.show()
+                case "cry": client.cry(args.name)
                 case "layout": client.layout(args.path)
                 case "text": client.text(args.name, args.value)
                 case "style": client.style(args.name, args.color, args.background)

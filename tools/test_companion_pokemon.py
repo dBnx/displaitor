@@ -127,11 +127,11 @@ class RescuePetTests(unittest.TestCase):
                 frames.append(client.frame.call_args.args[0])
             self.assertGreater(len(set(frames)), 8)
             self.assertIn(("metric", "7%"), [call.args for call in client.text.call_args_list])
-            self.assertIn(("demo", "CPU"), [call.args for call in client.text.call_args_list])
-            self.assertIn(("mood", "PLAY"), [call.args for call in client.text.call_args_list])
+            self.assertIn(("mood", "CPU"), [call.args for call in client.text.call_args_list])
+            self.assertIn(("demo", "PLAY"), [call.args for call in client.text.call_args_list])
             companion.update(client, activity, 1)
             self.assertEqual(companion.action_remaining, 0)
-            self.assertEqual(companion.last["mood"], "IDLE")
+            self.assertEqual(companion.last["demo"], "IDLE")
             companion.buttons(state)
             right = canvas.ButtonEvent(2, 20, frozenset({'right'}), frozenset({'right'}), frozenset(), True)
             companion.buttons(canvas.ButtonState(frozenset(), True, (right,), False, False, 0, 20))
@@ -186,7 +186,7 @@ class RescuePetSimulatorTests(unittest.TestCase):
                                      rendered.crop((32, 0, 64, 6)).tobytes())
                     self.assertFalse(any(actual[y*64+x] for y in range(8, 18) for x in range(40, 52)))
                     self.assertTrue(any(actual[y*64+x] for y in range(8, 18) for x in range(58, 64)))
-                    self.assertTrue(any(actual[y*64+x] for y in range(20, 26) for x in range(52, 56)))
+                    self.assertTrue(any(actual[y*64+x] for y in range(26, 32) for x in range(52, 56)))
                 finally:
                     if process.poll() is None:
                         process.terminate()

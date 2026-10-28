@@ -17,25 +17,25 @@ from PIL import Image, ImageDraw
 try:
     from .canvas import Client, image_frame
     from .companion_pokemon import COLORS as POKEMON, ACTION_SECONDS, sprite as pokemon_sprite
+    from .companion_stats import fields as stats_fields
 except ImportError:
     from canvas import Client, image_frame
     from companion_pokemon import COLORS as POKEMON, ACTION_SECONDS, sprite as pokemon_sprite
+    from companion_stats import fields as stats_fields
 
 ROOT = Path(__file__).resolve().parents[1]
 DESIGNS = {"orbit": "#79ECF0", "ember": "#FFAC72", "sprout": "#96E8A0", **POKEMON}
 FRAMES = 16
 
 
-def layout(design):
+def layout(design, page="cpu"):
     color = DESIGNS[design]
     # Long names reserve a blank cell, clear of the panel's edge.
     # Numeric/status slots retain exactly the same positions and widths.
     name_width = (len(design) + 1) * 4 if len(design) > 6 else 24
     return {"text": {
         "name": dict(x=64 - name_width, y=0, width=name_width, height=6, font="small", color=color, text=design.upper()),
-        "metric": dict(x=40, y=8, width=24, height=10, font="medium", align="right", color="#FFFFFF", text="42%"),
-        "mood": dict(x=40, y=20, width=24, height=6, font="small", color=color, text="IDLE"),
-        "demo": dict(x=40, y=26, width=24, height=6, font="small", color="#505860", text="DEMO"),
+        **stats_fields(color, page),
     }}
 
 
@@ -180,10 +180,10 @@ def quantized(image):
     return result
 
 
-def preview_frame(image, rendered, design):
+def preview_frame(image, rendered, design, page="cpu"):
     """Retain each real text box, including names wider than the right HUD."""
     image = quantized(image)
-    for slot in layout(design)["text"].values():
+    for slot in layout(design, page)["text"].values():
         x, y = slot["x"], slot["y"]
         area = (x, y, x + slot["width"], y + slot["height"])
         image.paste(rendered.crop(area), (x, y))

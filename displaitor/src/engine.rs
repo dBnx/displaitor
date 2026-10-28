@@ -197,12 +197,18 @@ impl<const N: usize> Engine<N> {
         let edges = controls.rising(self.previous);
         self.previous = controls;
         let canvas_requested = remote && core::mem::take(&mut self.canvas_requested);
+        let canvas_audio = if remote {
+            self.canvas.take_audio_request()
+        } else {
+            None
+        };
         let mut update = Update {
             redraw: core::mem::take(&mut self.initial),
             audio: None,
         };
         if edges.buttons_b {
             self.canvas_requested = false;
+            let _ = self.canvas.take_audio_request();
             return match self.screen {
                 Screen::Splash => self.enter_app(AppId::Names),
                 Screen::App(_) => {
@@ -258,7 +264,10 @@ impl<const N: usize> Engine<N> {
                     };
                 }
             }
-            Screen::App(AppId::Canvas) => update.redraw |= self.canvas.take_dirty(),
+            Screen::App(AppId::Canvas) => {
+                update.redraw |= self.canvas.take_dirty();
+                update.audio = canvas_audio;
+            }
             Screen::App(AppId::Names) => {
                 let steps = self.ticks(elapsed.min(Duration::from_millis(250)), NAMES_PERIOD_US);
                 for _ in 0..steps {

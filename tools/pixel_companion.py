@@ -16,10 +16,12 @@ try:
     from .canvas import Client, image_frame
     from .companion_designs import DESIGNS, FRAMES, POKEMON, ACTION_SECONDS, layout, sprite
     from .pc_hub import Sample, Sampler, metric_color, percent, resolve_port
+    from .companion_stats import PAGES, labels as stats_labels
 except ImportError:
     from canvas import Client, image_frame
     from companion_designs import DESIGNS, FRAMES, POKEMON, ACTION_SECONDS, layout, sprite
     from pc_hub import Sample, Sampler, metric_color, percent, resolve_port
+    from companion_stats import PAGES, labels as stats_labels
 
 
 @dataclass(frozen=True)
@@ -28,6 +30,7 @@ class Activity:
     source: str
     mood: str
     demo: bool = False
+    sample: Sample | None = None
 
 
 class Workload:
@@ -43,7 +46,8 @@ class Workload:
         values = [(name, value) for name, value in values if value is not None]
         if not values:
             self.mood = "unknown"
-            return Activity(None, self.source.upper() if self.source != "auto" else "LOAD", self.mood)
+            return Activity(None, self.source.upper() if self.source != "auto" else "LOAD", self.mood,
+                            sample.demo if sample else False, sample)
         source, value = max(values, key=lambda pair: pair[1])
         if value >= 65 or (self.mood == "hard" and value >= 55):
             self.mood = "hard"
@@ -51,7 +55,7 @@ class Workload:
             self.mood = "busy"
         else:
             self.mood = "idle"
-        return Activity(value, source, self.mood, sample.demo)
+        return Activity(value, source, self.mood, sample.demo, sample)
 
 
 class DemoSampler:
@@ -61,7 +65,7 @@ class DemoSampler:
 
     def sample(self):
         value = self.load if self.load is not None else (5, 45, 95)[int((time.monotonic() - self.started) / 4) % 3]
-        return Sample(value, None, value, datetime.now(), demo=True)
+        return Sample(value, 64, value, datetime.now(), vram_used=round(3.2 * 1024**3), demo=True)
 
 
 class Readings:
@@ -114,12 +118,19 @@ class Readings:
 
 
 class Companion:
-    def __init__(self, design):
+    def __init__(self, design, page="cpu", *, sound=True):
         self.design = design
         self.last = {}
         self.phase = 0.0
         self.action_remaining = 0.0
         self.action_pending = False
+        self.page_index = PAGES.index(page)
+        self.sound = sound
+        self.cry_pending = None
+
+    @property
+    def page(self):
+        return PAGES[self.page_index]
 
     def buttons(self, state):
         """Apply host actions only while Canvas is active; local Back still wins."""
@@ -137,21 +148,29 @@ class Companion:
                 self.phase = 0.0
                 self.action_remaining = 0.0
                 self.action_pending = False
+                self.cry_pending = None
+                changed = True
+            up, down = 'up' in event.pressed, 'down' in event.pressed
+            if up != down:
+                self.page_index = (self.page_index + (1 if down else -1)) % len(PAGES)
                 changed = True
             if 'a' in event.pressed:
                 self.action_remaining = ACTION_SECONDS if self.design in POKEMON else 1.2
                 self.action_pending = True
+                self.cry_pending = self.design if self.design in POKEMON and self.sound else None
         return changed
 
-    def install(self, client, activity, *, activate=True):
+    def install(self, client, activity, *, activate=True, elapsed=0):
+        if activate:
+            # Reconnect must not replay a sound queued for an earlier session.
+            self.cry_pending = None
         try:
             with client.transaction():
                 self.last.clear()
-                scene = layout(self.design)
-                for name, text in (("metric", "--%"), ("mood", "WAIT"), ("demo", "LOAD")):
-                    scene["text"][name]["text"] = text
+                scene = layout(self.design, self.page)
                 client.layout(scene)
-                self.update(client, activity, 0)
+                self.last["name"] = scene["text"]["name"]["text"]
+                self.update(client, activity, elapsed)
                 if activate:
                     client.show()
         except BaseException:
@@ -180,12 +199,13 @@ class Companion:
                         hop = round(abs(math.sin((1.3 - self.action_remaining) * math.tau / .4)) * 3)
                 image = sprite(self.design, int(self.phase), activity.mood, hop=hop, action=action)
                 client.frame(image_frame(image))
-                color = metric_color(activity.value, DESIGNS[self.design])
-                labels = {"metric": "--%" if activity.value is None else f"{activity.value:.0f}%",
-                          "mood": "PLAY" if self.action_remaining else
-                                  {"unknown": "WAIT", "idle": "IDLE", "busy": "WORK", "hard": "HARD"}[activity.mood],
-                          "demo": "DEMO" if activity.demo else activity.source}
-                for name, text in labels.items():
+                # Overview has no footer: label synthetic data in its header.
+                title = "DEMO" if activity.demo and self.page == "all" else self.design.upper()
+                if self.last.get("name") != title:
+                    client.text("name", title)
+                    self.last["name"] = title
+                for name, (text, value) in stats_labels(activity, self.page, bool(self.action_remaining)).items():
+                    color = metric_color(value, DESIGNS[self.design]) if value is not None else DESIGNS[self.design]
                     if self.last.get((name, "color")) != color:
                         client.style(name, color, None)
                         self.last[(name, "color")] = color
@@ -196,10 +216,22 @@ class Companion:
             self.last.clear()
             raise
 
+    def play_pending_cry(self, client):
+        """Send a one-shot effect only after the scene transaction has committed."""
+        name, self.cry_pending = self.cry_pending, None
+        if name is None or not self.sound:
+            return
+        try:
+            client.cry(name)
+        except NotImplementedError:
+            self.sound = False
+            print("Pokémon cries need updated firmware; animations and stats remain available.", file=sys.stderr)
+
 
 def run(args):
     factory = (lambda: DemoSampler(args.demo_load)) if args.demo or args.demo_load is not None else lambda: Sampler(args.gpu)
-    workload, companion = Workload(args.load), Companion(args.design)
+    workload = Workload(args.load)
+    companion = Companion(args.design, getattr(args, "view", "cpu"), sound=not getattr(args, "no_sound", False))
     sent = 0
     with Readings(factory, args.interval) as readings:
         while args.frames is None or sent < args.frames:
@@ -225,9 +257,10 @@ def run(args):
                         if changed:
                             # Changing a pet must never pull the user back into
                             # Canvas if Back arrived after the button read.
-                            companion.install(client, activity, activate=False)
+                            companion.install(client, activity, activate=False, elapsed=now - previous)
                         else:
                             companion.update(client, activity, now - previous)
+                        companion.play_pending_cry(client)
                         previous = now
                         sent += 1
             except (OSError, ValueError) as error:
@@ -308,6 +341,8 @@ def main():
     parser.add_argument("--timeout", type=float, default=3, help="Canvas acknowledgement timeout")
     parser.add_argument("--frames", type=int, help="send N frames and exit; connection errors fail immediately")
     parser.add_argument("--no-buttons", action="store_true", help="disable host pet controls")
+    parser.add_argument("--view", choices=PAGES, default="cpu", help="initial stats page; Up/Down cycles pages")
+    parser.add_argument("--no-sound", action="store_true", help="disable A-button cries")
     parser.add_argument("--preview-dir", help="export all activity GIFs locally with the Rust simulator; no device")
     demo = parser.add_mutually_exclusive_group()
     demo.add_argument("--demo", action="store_true", help="labelled idle/work/hard cycle, four seconds per state")

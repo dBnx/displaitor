@@ -42,7 +42,7 @@ class WorkloadTests(unittest.TestCase):
             self.assertEqual(client.buttons.call_count, 1)
             self.assertEqual(client.frame.call_count, 3)
             self.assertEqual(errors.getvalue().count("updated firmware"), 1)
-            self.assertIn(('demo', 'CPU'), [call.args for call in client.text.call_args_list])
+            self.assertIn(('mood', 'CPU'), [call.args for call in client.text.call_args_list])
 
     def test_retained_presses_cycle_pets_once_and_keep_local_back_priority(self):
         def event(sequence, *pressed, active=True):
@@ -88,8 +88,8 @@ class WorkloadTests(unittest.TestCase):
         companion.update(client, activity, 2)
         calls = [call.args for call in client.text.call_args_list]
         self.assertIn(('metric', '5%'), calls)
-        self.assertIn(('demo', 'CPU'), calls)
-        self.assertIn(('mood', 'PLAY'), calls)
+        self.assertIn(('mood', 'CPU'), calls)
+        self.assertIn(('demo', 'PLAY'), calls)
         normal = pixel_companion.Companion("orbit")
         other = MagicMock()
         normal.update(other, activity, 2)
@@ -104,7 +104,7 @@ class WorkloadTests(unittest.TestCase):
         client.reset_mock()
         companion.update(client, activity, 2)
         self.assertEqual(companion.action_remaining, 0)
-        self.assertIn(('mood', 'IDLE'), [call.args for call in client.text.call_args_list])
+        self.assertIn(('demo', 'IDLE'), [call.args for call in client.text.call_args_list])
 
     def test_commit_failure_invalidates_companion_cache(self):
         client = MagicMock()
@@ -117,7 +117,7 @@ class WorkloadTests(unittest.TestCase):
         client.transaction.return_value.__exit__.side_effect = None
         client.reset_mock()
         companion.update(client, activity, 0)
-        self.assertEqual(client.text.call_count, 3)
+        self.assertEqual(client.text.call_count, 4)
         self.assertEqual(client.style.call_count, 3)
 
     def test_real_activity_uses_busiest_counter_and_hysteresis_not_ram(self):
@@ -250,13 +250,13 @@ class CompanionSimulatorTests(unittest.TestCase):
                             possible.append([words[y*64+x] for y in range(32) for x in range(40)])
                     self.assertIn(left, possible)
                     footer = [actual[y*64+x] for y in range(26, 32) for x in range(40, 64)]
-                    expected_text = "DEMO" if mode == "demo" else "CPU"
+                    expected_texts = ("DEMO",) if mode == "demo" else ("IDLE", "WORK", "HARD")
                     color = "#FF665E" if mode == "demo" else None
                     self.assertGreater(sum(pixel != 0 for pixel in footer), 10)
                     if color:
                         self.assertEqual({pixel for pixel in footer if pixel}, {canvas.color565(color)})
-                    self.assertEqual([pixel != 0 for pixel in footer],
-                                     self.footer_mask(binary, expected_text, directory))
+                    self.assertIn([pixel != 0 for pixel in footer],
+                                  [self.footer_mask(binary, text, directory) for text in expected_texts])
                 finally:
                     if process.poll() is None:
                         process.terminate()

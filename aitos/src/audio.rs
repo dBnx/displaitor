@@ -6,6 +6,7 @@ pub struct Player {
     decoder: Option<QoaDecoder<'static>>,
     enabled: bool,
     repeat: bool,
+    cry: bool,
 }
 
 impl Default for Player {
@@ -14,6 +15,7 @@ impl Default for Player {
             decoder: None,
             enabled: true,
             repeat: false,
+            cry: false,
         }
     }
 }
@@ -22,7 +24,11 @@ impl Player {
     /// Starts from the beginning, including repeated requests for the same clip.
     /// IDs without an asset behave as Stop. A malformed asset stops playback.
     pub fn select(&mut self, id: AudioId) -> Result<(), QoaError> {
+        if id.is_cry() && !self.enabled {
+            return Ok(());
+        }
         self.decoder = None;
+        self.cry = id.is_cry();
         self.repeat = matches!(
             id,
             AudioId::MusicTetris | AudioId::MusicPPAP | AudioId::MusicPen | AudioId::MusicNyan
@@ -33,6 +39,10 @@ impl Player {
         Ok(())
     }
     pub fn set_enabled(&mut self, enabled: bool) {
+        if !enabled && self.cry {
+            self.decoder = None;
+            self.cry = false;
+        }
         self.enabled = enabled;
     }
     pub fn enabled(&self) -> bool {
@@ -41,7 +51,8 @@ impl Player {
     pub fn sample_rate(&self) -> Option<u32> {
         self.decoder.as_ref().map(QoaDecoder::sample_rate)
     }
-    /// Muting pauses decoding. Music loops; effects stop at EOF. Errors stop playback.
+    /// Music pauses when muted and loops at EOF. Effects stop at EOF; cries are
+    /// discarded on mute. Errors stop playback.
     pub fn next_sample(&mut self) -> Result<Option<i16>, QoaError> {
         if !self.enabled {
             return Ok(None);
@@ -116,7 +127,8 @@ pub fn dma_transfer_completed(busy: bool, remaining: u32, completion_seen: bool)
     completion_seen && !busy && remaining == 0
 }
 
-/// Sample-and-hold rate conversion. Muting preserves both decoder and fractional phase.
+/// Sample-and-hold rate conversion. Muting music preserves decoder and fractional
+/// phase; short companion cries are discarded instead of replaying after unmute.
 /// This also supports the retained 100 Hz Nyan asset without a very slow DMA clock.
 pub struct OutputPlayer {
     player: Player,
@@ -135,6 +147,9 @@ impl OutputPlayer {
         }
     }
     pub fn select(&mut self, id: AudioId) -> Result<(), QoaError> {
+        if id.is_cry() && !self.enabled() {
+            return Ok(());
+        }
         self.phase = self.output_rate;
         self.sample = 0;
         self.player.select(id)

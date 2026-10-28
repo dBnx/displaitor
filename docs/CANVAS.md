@@ -246,6 +246,7 @@ scene. The packet storage also serves as background staging, avoiding another
 | 8 Commit | Empty; publish a successful staged scene and its deferred Show |
 | 9 Abort | Empty; discard staging and deferred Show; safe without a transaction |
 | 10 Buttons | Empty baseline or `after_id:u32`; [button report response](CANVAS-BUTTONS.md#wire-extension) |
+| 11 Companion cry | One byte: 0 stop, 1 Torchic, 2 Eevee, 3 Treecko; [sound semantics](CANVAS-BUTTONS.md#companion-sound-extension) |
 
 A layout record is `slot:u8, x:u8, y:u8, width:u8, height:u8, font:u8,
 foreground:u16, opaque:u8, background:u16, text_length:u8, text_bytes`.
@@ -257,7 +258,7 @@ serialized with `ensure_ascii=False` and `separators=(",", ":")`.
 These checks detect stale references and corruption; they are not authentication.
 
 Structurally valid requests with a valid CRC receive a COBS-framed response.
-Commands 0–9, and errors for command 10, retain this ordinary ACK:
+Commands 0–9 and 11, and errors for command 10, retain this ordinary ACK:
 
 ```text
 1:u8 | 0x80:u8 | sequence:u16 | status:u8 | 64:u8 | 32:u8 |
@@ -304,3 +305,15 @@ transaction/session recovery and actual framebuffer comparisons. the user's
 initial photograph confirmed the visible layout and transparent/opaque text boxes,
 and he subsequently confirmed the corrected panel colours looked good; see
 [connected-board evidence](VALIDATION.md#connected-board-checks).
+
+
+### Windows COM read timeout
+
+Serial reads use at most 50 ms per call, including reads inside the reply parser.
+An empty short read keeps waiting for the same reply, preserving partial COBS
+frames until the configured overall acknowledgement deadline (default 3 s).
+The write timeout still uses that configured deadline. TCP timeouts and EOF
+handling are unchanged. This avoids long blocking COM reads without treating a
+normal gap between USB packets as a failed command. Host-only regression tests
+simulate fragmented Windows-style replies, missing ACKs and deadlines below
+50 ms; physical Windows USB operation still needs checking.
