@@ -45,8 +45,8 @@ respect `active` and avoid calling `show()` in response to a stale event. Scene
 updates may continue in the background while the user is in another local app.
 
 The live companion polls once per animation update. Left/Right cycle Orbit,
-Ember and Sprout; A makes the current pet hop briefly while its percentage remains
-a real CPU/GPU reading. Switching pets does not issue Show, preserving a Back
+Ember, Sprout, Torchic, Eevee and Treecko. A triggers the selected pet's hop or
+trick while its percentage remains a real CPU/GPU reading. Switching pets does not issue Show, preserving a Back
 that arrives after the host's last button poll. `--no-buttons` disables these
 actions. Older firmware is detected once per connection and continues displaying
 live metrics without button actions, with a clear update message.

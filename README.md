@@ -53,9 +53,10 @@ Candidate next apps are in [app ideas](docs/APP-IDEAS.md), including a standalon
 Hourglass timer and lander game, plus a Canvas build-status beacon and pixel pet.
 The [Pixel Companion](docs/PIXEL-COMPANION.md) reacts to real CPU/GPU activity:
 Orbit lifts weights, Ember runs and Sprout exercises its leaves as load rises.
+Torchic, Eevee and Treecko add an ember sneeze, a leaf pounce and a twig toss.
 Run `.venv/bin/python tools/pixel_companion.py --design orbit` to open it, or
 `tools\pixel_companion.cmd` on Windows. It uses the existing Canvas connection.
-Left/Right switch pets and A triggers a short hop; Back stays local. Other host
+Left/Right switch all six pets and A triggers a hop or trick; Back stays local. Other host
 apps can use [button state and retained transitions](docs/CANVAS-BUTTONS.md) on
 the same connection. Both live companion launchers default to actual CPU/GPU
 readings; synthetic values require an explicit demo option.

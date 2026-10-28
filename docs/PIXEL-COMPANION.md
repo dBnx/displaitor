@@ -2,7 +2,8 @@
 
 An idle character that exercises harder as PC usage rises. Run the Python sender
 to open Canvas and stream the character; it uses real CPU/GPU readings by default.
-Choose Orbit, Ember or Sprout. It is a host-driven Canvas scene, so it appears
+Choose Orbit, Ember, Sprout, Torchic, Eevee (Evoli) or Treecko (Geckarbor).
+It is a host-driven Canvas scene, so it appears
 while this script runs and does not automatically replace another app on idle.
 
 ![Idle, working and hard-work states, rendered at 64×32](ui/companions/activity/workload-designs.png)
@@ -20,13 +21,44 @@ Ember's fur and Sprout's body/leaves use a darker palette for panel contrast;
 their eyes, cheeks, ear/tail-tip details and other small accents retain their
 brightness. The same palette applies while exercising and hopping.
 
+## Mystery Dungeon pets
+
+The three new pets use native Mystery Dungeon poses, inspired by Red Rescue
+Team, with dim body colours and small bright details. They are part of the live
+sender's normal Left/Right rotation, after the original three pets.
+
+![Torchic's ember sneeze, Eevee's leaf pounce and Treecko's twig toss](ui/companions/rescue-pets/play.gif)
+
+| Pet | Idle | Working / hard work | A button |
+| --- | --- | --- | --- |
+| **Torchic** | [Crest bob and a curious look at a seed](ui/companions/rescue-pets/torchic-idle.gif) | [Little steps](ui/companions/rescue-pets/torchic-busy.gif), [eager hops and tiny embers](ui/companions/rescue-pets/torchic-hard.gif) | [Crouches, sneezes a few embers, hops back and looks pleased](ui/companions/rescue-pets/torchic-play.gif) |
+| **Eevee / Evoli** | [Ear twitch and a glance at you](ui/companions/rescue-pets/eevee-idle.gif) | [Bounds after a drifting leaf](ui/companions/rescue-pets/eevee-busy.gif), [with more spring under load](ui/companions/rescue-pets/eevee-hard.gif) | [Crouches, pounces to touch the leaf, then returns](ui/companions/rescue-pets/eevee-play.gif) |
+| **Treecko / Geckarbor** | [Holds a little forked twig with small gecko fingers](ui/companions/rescue-pets/treecko-idle.gif) | [Gently rolls its wrist](ui/companions/rescue-pets/treecko-busy.gif), [with a wider motion under load](ui/companions/rescue-pets/treecko-hard.gif) | [Bends its arm, tosses the twig through one turn, opens its hand and catches it](ui/companions/rescue-pets/treecko-play.gif) |
+
+[All three pets in idle/work/hard/play states](ui/companions/rescue-pets/workload-designs.png).
+The new tricks take 1.8 seconds, independently of CPU/GPU readings. The floor
+and text stay fixed; `%` stays anchored between `1%` and `100%`. The full Torchic
+and Treecko names fit in a slightly wider header with a four-pixel right gutter,
+without moving the numeric or status slots. Treecko's feet stay planted as its
+elbow, wrist and fingers move. The original pets keep their short A-button hop.
+
+Select a new pet directly with `--design torchic`, `--design eevee` or
+`--design treecko`. The bundled [sprite inputs and attribution](../tools/art/rescue-pets/README.md)
+are used only by the host app, with no runtime downloads or firmware changes.
+New-pet checks cover real Python-to-Rust Canvas rendering and rasterized prop
+contact/catch events. The Torchic live sender also connected successfully over
+native USB on 2026-10-28. Panel feedback informed the name padding and Treecko
+hand/motion refinements; those latest refinements are simulator-verified and
+running locally, with a physical appearance recheck pending.
+
 ## Combined sprite sheet
 
-[Native sprite sheet](ui/companions/activity/sprite-sheet.png) contains all 144
+[Native sprite sheet](ui/companions/activity/sprite-sheet.png) contains all 288
 character frames at their original pixel resolution. Each cell is 40×32 pixels,
 cropped to the character region; the separate 24-column Canvas HUD is omitted.
-There are 16 columns (frames 0–15) and nine rows: Orbit idle/work/hard, then Ember
-idle/work/hard, then Sprout idle/work/hard. The full sheet is 640×288 pixels.
+There are 16 columns (frames 0–15) and 18 rows: idle/work/hard for each pet in
+selection order: Orbit, Ember, Sprout, Torchic, Eevee, Treecko. The full sheet is
+640×576 pixels. A-button tricks are shown in the separate GIFs above.
 
 ![All character poses, enlarged without smoothing and labelled](ui/companions/activity/sprite-sheet-labelled.png)
 
@@ -100,7 +132,7 @@ tools\pixel_companion.cmd --design ember
 
 The launcher uses the repository's Windows virtual environment if present, or
 `py -3` otherwise. It needs the same Python dependencies. Native-board discovery
-excludes the probe UART. All three characters in idle/work/hard states now pass
+excludes the probe UART. The original Orbit, Ember and Sprout idle/work/hard states passed
 [Linux native USB uploads and hardware framebuffer comparisons](HARDWARE-CANVAS-USB.md).
 Windows execution remains unverified; a debug probe alone does not provide a
 Canvas serial connection. Earlier SWD-only checks are retained in
@@ -161,12 +193,13 @@ is the default. `companion_designs.py --port ...` now shares the live applicatio
 including actual CPU/GPU readings and button controls. Offline preview exports
 retain explicitly labelled fixture values.
 
-With updated firmware, Left/Right switch pets and A triggers a short hop. Back
+With updated firmware, Left/Right switch through all six pets and A triggers
+the selected pet's hop or trick. Back
 still returns to the local menu and Select retains mute. Use `--no-buttons` to
 disable pet controls; see [the host button interface](CANVAS-BUTTONS.md) to add
 your own scene/action handling through the same connection.
 
-To regenerate the activity sheet and all nine native-size GIFs locally:
+To regenerate the activity sheet and all 24 native-size activity/action GIFs locally:
 
 ```sh
 cargo build -p simulaitor --no-default-features

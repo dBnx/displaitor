@@ -57,6 +57,13 @@ class WorkloadTests(unittest.TestCase):
         self.assertEqual(companion.design, "sprout")
         self.assertFalse(companion.buttons(state(event(4))))  # Held, without a new press.
         self.assertTrue(companion.buttons(state(event(5, 'right'))))
+        self.assertEqual(companion.design, "torchic")
+        for sequence, design in enumerate(("eevee", "treecko", "orbit"), 20):
+            self.assertTrue(companion.buttons(state(event(sequence, 'right'))))
+            self.assertEqual(companion.design, design)
+        self.assertTrue(companion.buttons(state(event(24, 'left'))))
+        self.assertEqual(companion.design, "treecko")
+        self.assertTrue(companion.buttons(state(event(25, 'right'))))
         self.assertEqual(companion.design, "orbit")
         for report in (state(event(6, 'left'), active=False),
                        state(event(7, 'right'), lost=True),

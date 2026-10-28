@@ -14,11 +14,11 @@ import time
 
 try:
     from .canvas import Client, image_frame
-    from .companion_designs import DESIGNS, layout, sprite
+    from .companion_designs import DESIGNS, FRAMES, POKEMON, ACTION_SECONDS, layout, sprite
     from .pc_hub import Sample, Sampler, metric_color, percent, resolve_port
 except ImportError:
     from canvas import Client, image_frame
-    from companion_designs import DESIGNS, layout, sprite
+    from companion_designs import DESIGNS, FRAMES, POKEMON, ACTION_SECONDS, layout, sprite
     from pc_hub import Sample, Sampler, metric_color, percent, resolve_port
 
 
@@ -139,7 +139,7 @@ class Companion:
                 self.action_pending = False
                 changed = True
             if 'a' in event.pressed:
-                self.action_remaining = 1.2
+                self.action_remaining = ACTION_SECONDS if self.design in POKEMON else 1.2
                 self.action_pending = True
         return changed
 
@@ -162,7 +162,7 @@ class Companion:
         try:
             with client.transaction():
                 speed = {"unknown": 2, "idle": 3, "busy": 8, "hard": 12}[activity.mood]
-                self.phase = (self.phase + elapsed * speed) % 16
+                self.phase = (self.phase + elapsed * speed) % FRAMES
                 # A newly polled press happened after the preceding frame
                 # interval; do not subtract that old interval from its action.
                 if self.action_pending:
@@ -170,11 +170,15 @@ class Companion:
                 else:
                     self.action_remaining = max(0.0, self.action_remaining - elapsed)
                 hop = 0
+                action = None
                 if self.action_remaining:
                     # A short hop is an explicit action, independent of CPU/GPU
                     # load. Move the actor while its floor and backdrop stay put.
-                    hop = round(abs(math.sin((1.3 - self.action_remaining) * math.tau / .4)) * 3)
-                image = sprite(self.design, int(self.phase), activity.mood, hop=hop)
+                    if self.design in POKEMON:
+                        action = 1 - self.action_remaining / ACTION_SECONDS
+                    else:
+                        hop = round(abs(math.sin((1.3 - self.action_remaining) * math.tau / .4)) * 3)
+                image = sprite(self.design, int(self.phase), activity.mood, hop=hop, action=action)
                 client.frame(image_frame(image))
                 color = metric_color(activity.value, DESIGNS[self.design])
                 labels = {"metric": "--%" if activity.value is None else f"{activity.value:.0f}%",
@@ -236,19 +240,19 @@ def run(args):
 
 
 def previews(directory):
-    """Capture actual Canvas HUDs, then export idle/work/hard animated studies."""
+    """Capture actual Canvas HUDs, then export activity and A-button animations."""
     from PIL import Image, ImageDraw
     try:
-        from .companion_designs import quantized
+        from .companion_designs import preview_frame
     except ImportError:
-        from companion_designs import quantized
+        from companion_designs import preview_frame
     root = Path(__file__).resolve().parents[1]
     binary = root / ("target/debug/simulaitor.exe" if sys.platform == "win32" else "target/debug/simulaitor")
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
-    sheet = Image.new("RGB", (1184, 672), "#0C0C0C")
+    sheet = Image.new("RGB", (8 + len(DESIGNS) * 392, 896), "#0C0C0C")
     labels = ImageDraw.Draw(sheet)
-    for row, (mood, load) in enumerate((("idle", 5), ("busy", 45), ("hard", 95))):
+    for row, (mood, load) in enumerate((("idle", 5), ("busy", 45), ("hard", 95), ("play", 5))):
         for col, design in enumerate(DESIGNS):
             snapshot = directory / (design + "-" + mood + ".ppm")
             process = subprocess.Popen([str(binary), "--headless", "--canvas-listen", "127.0.0.1:0",
@@ -259,7 +263,11 @@ def previews(directory):
                 if not line.startswith("Canvas listening on 127.0.0.1:"):
                     raise RuntimeError("simulator did not open Canvas: " + line)
                 with Client("tcp://" + line.split()[-1]) as client:
-                    Companion(design).install(client, Activity(load, "CPU", mood, True))
+                    companion = Companion(design)
+                    if mood == "play":
+                        companion.action_remaining = ACTION_SECONDS if design in POKEMON else 1.2
+                        companion.action_pending = True
+                    companion.install(client, Activity(load, "CPU", "idle" if mood == "play" else mood, True))
                 stdout, stderr = process.communicate(timeout=8)
                 if process.returncode:
                     raise RuntimeError(stdout + stderr)
@@ -270,13 +278,16 @@ def previews(directory):
             with Image.open(snapshot) as image:
                 still = image.convert("RGB")
             snapshot.unlink()
-            hud = still.crop((40, 0, 64, 32))
             animation = []
-            for frame in range(16):
-                image = quantized(sprite(design, frame, mood))
-                image.paste(hud, (40, 0))
-                animation.append(image)
-            speed = {"idle": 3, "busy": 8, "hard": 12}[mood]
+            for frame in range(FRAMES):
+                progress = frame / (FRAMES - 1)
+                action = progress if mood == "play" and design in POKEMON else None
+                hop = round(abs(math.sin((.1 + progress * 1.2) * math.tau / .4)) * 3) if mood == "play" and design not in POKEMON else 0
+                animation.append(preview_frame(
+                    sprite(design, frame, "idle" if mood == "play" else mood,
+                           hop=hop, action=action), still, design))
+            speed = {"idle": 3, "busy": 8, "hard": 12,
+                     "play": (FRAMES - 1) / (ACTION_SECONDS if design in POKEMON else 1.2)}[mood]
             animation[0].save(directory / (design + "-" + mood + ".gif"), save_all=True,
                               append_images=animation[1:], duration=round(1000 / speed),
                               loop=0, disposal=2, optimize=False)
