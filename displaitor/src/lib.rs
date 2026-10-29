@@ -11,6 +11,7 @@ pub mod canvas;
 pub mod canvas_input;
 pub mod canvas_protocol;
 mod content;
+mod cozy;
 mod engine;
 mod games;
 mod input;

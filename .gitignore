@@ -18,3 +18,8 @@ __pycache__/
 *.dump
 *.log
 .gdb_history
+
+# Local Python distribution outputs
+/dist/
+/build/
+*.egg-info/

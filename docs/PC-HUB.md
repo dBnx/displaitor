@@ -26,7 +26,7 @@ python3 -m venv .venv
 Connect the **board's own native USB data port** to the PC, then run:
 
 ```sh
-.venv/bin/python tools/pc_hub.py
+.venv/bin/python tools/run.py dashboard
 ```
 
 The launcher detects the Displaitor USB identity, uploads the scene and switches
@@ -41,7 +41,7 @@ rejects that command; the launcher reports that a firmware update is required.
 
 ### Windows
 
-Install Python 3.10 or newer, then run these commands from the project folder
+Install Python 3.12 or newer, then run these commands from the project folder
 in PowerShell (no virtual-environment activation is needed):
 
 ```powershell
@@ -85,7 +85,7 @@ is used. GPU subprocesses run without opening console windows.
 - A small green dot at the bottom right switches on/off as samples arrive.
   There is no header or clock; all four readings have their own row.
 
-The layout uses the eight named text slots in `tools/layouts/pc_hub.json`.
+The layout uses the eight named text slots in `tools/displaitor_tools/resources/layouts/pc_hub.json`.
 Percentages are text updates; meters are a generated 64×32 RGB565 background.
 Numeric boxes align right in fixed monospace cells: percentages reserve three
 digits plus `%`, and VRAM has ten cells with its unit anchored at the right.
@@ -106,19 +106,19 @@ does not independently expire the scene or detect a crashed host process.
 
 ```sh
 # Less frequent updates.
-.venv/bin/python tools/pc_hub.py --interval 5
+.venv/bin/python tools/run.py dashboard --interval 5
 
 # Explicit device if multiple boards are connected; Linux by-id names are stable.
-.venv/bin/python tools/pc_hub.py --port /dev/serial/by-id/YOUR-DISPLAITOR-DEVICE
+.venv/bin/python tools/run.py dashboard --port /dev/serial/by-id/YOUR-DISPLAITOR-DEVICE
 
 # One snapshot, then exit. A connection error fails immediately in finite modes.
-.venv/bin/python tools/pc_hub.py --once
+.venv/bin/python tools/run.py dashboard --once
 
 # Choose an AMD Linux DRM card, NVIDIA GPU index, or disable GPU polling.
-.venv/bin/python tools/pc_hub.py --gpu card1
-.venv/bin/python tools/pc_hub.py --gpu nvidia:0
-.venv/bin/python tools/pc_hub.py --gpu windows:0 # Windows only
-.venv/bin/python tools/pc_hub.py --gpu none
+.venv/bin/python tools/run.py dashboard --gpu card1
+.venv/bin/python tools/run.py dashboard --gpu nvidia:0
+.venv/bin/python tools/run.py dashboard --gpu windows:0 # Windows only
+.venv/bin/python tools/run.py dashboard --gpu none
 ```
 
 On Linux, `auto` first looks for AMD DRM load/VRAM counters, then tries NVIDIA
@@ -152,9 +152,9 @@ disconnect detection, acknowledgements, scene upload and rendering are real.
 ```sh
 cargo run -p simulaitor -- --canvas-listen 127.0.0.1:7777
 # In another terminal, live stats from the local PC:
-.venv/bin/python tools/pc_hub.py --port tcp://127.0.0.1:7777
+.venv/bin/python tools/run.py dashboard --port tcp://127.0.0.1:7777
 # Or synthetic values for a repeatable preview (CPU* marks demo mode):
-.venv/bin/python tools/pc_hub.py --port tcp://127.0.0.1:7777 --demo
+.venv/bin/python tools/run.py dashboard --port tcp://127.0.0.1:7777 --demo
 ```
 
 `--demo` marks the first row `CPU*` to distinguish synthetic data.

@@ -1,5 +1,5 @@
 name: Offline checks
-on: [push, pull_request]
+on: [push, pull_request, workflow_dispatch]
 permissions:
   contents: read
 jobs:
@@ -9,22 +9,48 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
       - run: sudo apt-get update && sudo apt-get install -y libsdl2-dev pkg-config python3-venv
-      - run: python3 -m venv .venv && .venv/bin/pip install -r tools/requirements.txt
+      - run: python3 -m venv .venv && .venv/bin/pip install -r tools/requirements-dev.txt
       - name: Install isolated pinned Rust toolchain
         run: |
           export RUSTUP_HOME="$RUNNER_TEMP/displaitor-rustup"
           echo "RUSTUP_HOME=$RUSTUP_HOME" >> "$GITHUB_ENV"
           rustup toolchain install 1.99.0 --profile minimal --component rustfmt --component clippy --target thumbv6m-none-eabi
+      - name: Verify installed Python wheel
+        run: |
+          .venv/bin/python -m build
+          cargo build --locked -p simulaitor --no-default-features
+          .venv/bin/python scripts/check_wheel.py --simulator target/debug/simulaitor
       - run: PATH="$PWD/.venv/bin:$PATH" ./scripts/check.sh
+      - name: Downloadable Python distribution
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: displaitor-python
+          path: |
+            dist/*.whl
+            dist/*.tar.gz
+          if-no-files-found: error
+          retention-days: 30
   windows-helper:
     runs-on: windows-latest
+    strategy:
+      matrix:
+        python: ["3.12", "3.14"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: ${{ matrix.python }}
       - run: python -m venv .venv
-      - run: .\.venv\Scripts\python.exe -m pip install -r tools\requirements.txt
+      - run: .\.venv\Scripts\python.exe -m pip install -r tools\requirements-dev.txt
       - run: rustup toolchain install 1.99.0 --profile minimal
+      - run: .\.venv\Scripts\python.exe -m mypy
       - run: cargo build --locked -p simulaitor --no-default-features
-      - run: .\.venv\Scripts\python.exe -m unittest discover -s tools -p 'test_*.py' -v
+      - run: .\.venv\Scripts\python.exe -m build
+      - run: .\.venv\Scripts\python.exe scripts/check_wheel.py --simulator target/debug/simulaitor.exe
+      - run: .\.venv\Scripts\python.exe -m unittest discover -s tools/tests -t tools -p 'test_*.py' -v

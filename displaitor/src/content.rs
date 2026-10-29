@@ -12,10 +12,19 @@ const ROOT_ENTRIES: [Entry<'static>; 4] = [
     Entry::new("Play", Action::Menu(PLAY)),
     Entry::new("Canvas", Action::App(AppId::Canvas)),
 ];
-const WATCH_ENTRIES: [Entry<'static>; 3] = [
+const WATCH_ENTRIES: [Entry<'static>; 12] = [
     Entry::new("Nyankatz", Action::App(AppId::Nyan)),
     Entry::new("Hyperspace", Action::App(AppId::Hyper)),
-    Entry::new("Campfire", Action::App(AppId::Fire)),
+    Entry::new("Fireplace", Action::App(AppId::Fire)),
+    Entry::new("Farm dusk", Action::App(AppId::CozyFarm)),
+    Entry::new("Snow walk", Action::App(AppId::CozyWinter)),
+    Entry::new("Blossoms", Action::App(AppId::CozyOkami)),
+    Entry::new("Valley camp", Action::App(AppId::CozyWitcher)),
+    Entry::new("Tidepool", Action::App(AppId::CozyReef)),
+    Entry::new("Palico", Action::App(AppId::CozyPalico)),
+    Entry::new("Rathalos", Action::App(AppId::CozyRathalos)),
+    Entry::new("Zinogre", Action::App(AppId::CozyZinogre)),
+    Entry::new("Poogie", Action::App(AppId::CozyPoogie)),
 ];
 const PLAY_ENTRIES: [Entry<'static>; 2] = [
     Entry::new("Pong", Action::App(AppId::Pong)),
@@ -62,7 +71,7 @@ pub(crate) const NAME_COUNT: usize = count_names(NAMES_SOURCE);
 const fn names() -> [Name; NAME_COUNT] {
     let mut output = [Name {
         text: "Displaitor",
-        width: 100,
+        width: 110,
     }; NAME_COUNT];
     let bytes = NAMES_SOURCE.as_bytes();
     let mut start = 0;
@@ -91,7 +100,8 @@ const fn names() -> [Name; NAME_COUNT] {
             }
             output[index] = Name {
                 text,
-                width: chars * 10,
+                // One blank character between names, including at wraparound.
+                width: (chars + 1) * 10,
             };
             index += 1;
         }
@@ -135,18 +145,10 @@ pub(crate) const HYPER: [&[u8]; 14] = [
     include_bytes!("../assets/hyperspace/0013.qoi"),
     include_bytes!("../assets/hyperspace/0014.qoi"),
 ];
-pub(crate) const FIRE: [&[u8]; 4] = [
-    include_bytes!("../assets/fire2/0001.qoi"),
-    include_bytes!("../assets/fire2/0002.qoi"),
-    include_bytes!("../assets/fire2/0003.qoi"),
-    include_bytes!("../assets/fire2/0004.qoi"),
-];
-
 pub(crate) fn frames(app: Option<AppId>) -> &'static [&'static [u8]] {
     match app {
         Some(AppId::Nyan) => &NYAN,
         Some(AppId::Hyper) => &HYPER,
-        Some(AppId::Fire) => &FIRE,
         _ => &SPLASH,
     }
 }
@@ -163,7 +165,7 @@ mod tests {
         assert_eq!(NAMES.len(), names.clone().count());
         for (indexed, text) in NAMES.iter().zip(names) {
             assert_eq!(indexed.text, text);
-            assert_eq!(indexed.width, text.chars().count() as i32 * 10);
+            assert_eq!(indexed.width, (text.chars().count() as i32 + 1) * 10);
         }
     }
 }

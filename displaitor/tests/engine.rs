@@ -315,7 +315,8 @@ fn event_wakes_preserve_animation_deadlines_without_drift() {
     for app in [AppId::Nyan, AppId::Hyper, AppId::Fire] {
         let _ = enter(&mut engine);
         assert_eq!(engine.screen(), Screen::App(app));
-        for elapsed in 1..50 {
+        let period = if app == AppId::Fire { 100 } else { 50 };
+        for elapsed in 1..period {
             assert!(
                 !engine
                     .update(Duration::from_millis(1), Controls::default())
@@ -323,7 +324,7 @@ fn event_wakes_preserve_animation_deadlines_without_drift() {
             );
             assert_eq!(
                 engine.next_update_after(),
-                Some(Duration::from_millis(50 - elapsed))
+                Some(Duration::from_millis(period - elapsed))
             );
         }
         assert!(
@@ -331,7 +332,10 @@ fn event_wakes_preserve_animation_deadlines_without_drift() {
                 .update(Duration::from_millis(1), Controls::default())
                 .redraw
         );
-        assert_eq!(engine.next_update_after(), Some(Duration::from_millis(50)));
+        assert_eq!(
+            engine.next_update_after(),
+            Some(Duration::from_millis(period))
+        );
         back(&mut engine);
         down(&mut engine);
     }
