@@ -10,8 +10,9 @@ untouched. Source selection and exact connector signals are in
 The pinned Rust 1.99.0 toolchain installs its ARM target, rustfmt, and Clippy via
 `rust-toolchain.toml`. Desktop simulation also needs SDL2 development libraries
 and pkg-config (`libsdl2-dev pkg-config` on Debian/Ubuntu, `sdl2 pkgconf` on Arch).
-The complete check script also needs Python 3.10+, Pillow, pyserial and psutil; install the helper
-dependencies in the Canvas setup below.
+The complete check script also needs Python 3.12+ and the development dependencies:
+`python -m pip install -r tools/requirements-dev.txt`. Host tools use annotations
+and strict mypy checks.
 
 ```sh
 # From this project directory: no hardware, window or audio device required.
@@ -52,26 +53,53 @@ for the extension model and regression evidence.
 Candidate next apps are in [app ideas](docs/APP-IDEAS.md), including a standalone
 Hourglass timer and lander game, plus a Canvas build-status beacon and pixel pet.
 The [Pixel Companion](docs/PIXEL-COMPANION.md) reacts to real CPU/GPU activity:
-Orbit lifts weights, Ember runs and Sprout exercises its leaves as load rises.
+Orbit lifts weights as load rises. Cubone, Ratzfatz and Ratikarl add a bone
+hop, berry nibble and acorn snack; Ember and Sprout are temporarily retired.
 Torchic, Eevee and Treecko add an ember sneeze, a leaf pounce and a twig toss.
-Run `.venv/bin/python tools/pixel_companion.py --design orbit` to open it, or
-`tools\pixel_companion.cmd` on Windows. It uses the existing Canvas connection.
-Left/Right switch all six pets and A triggers a hop or trick; Back stays local. Other host
+Run `.venv/bin/python tools/run.py companion --design torchic` to open it, or
+`tools\run.cmd companion --design torchic` on Windows. It uses the existing Canvas connection.
+Nudibranch and moray add sea-lettuce nibbling and bubble-hearts.
+Left/Right switch all nine pets and A triggers a hop or trick; Back stays local. Other host
 apps can use [button state and retained transitions](docs/CANVAS-BUTTONS.md) on
 the same connection. Both live companion launchers default to actual CPU/GPU
 readings; synthetic values require an explicit demo option.
 
-**Weather:** `.venv/bin/python tools/weather.py --status 'Rain soon'` adds a
-blinking rain cloud above the bottom condition text. Sun, cloud, snow, fog,
-storm and moon animations follow the supplied condition, with a muted palette
+The [installable Python library](tools/LIBRARY.md) can also be distributed as a
+wheel: `python -m build`. Recipients can use `displaitor new-scene my_scene.py`
+and implement `run_scene(render, on_buttons=...)` without a checkout.
+
+Host apps and offline generators share [one launcher and a tools guide](tools/README.md):
+`python tools/run.py companion --design torchic`.
+
+Display your own images with `python tools/run.py pictures photo.jpg second.png`.
+Left/Right browses; add `--interval 5` for a slideshow. The viewer fits images to
+64×32 with at most 10% stretching, otherwise preserving proportions with black
+bars. `--fit cover` crops to fill instead. The shared gamma correction applies.
+
+**Cozy scenes:** all ten are built into **Watch** and run without a PC: Farm dusk,
+Snow walk, Blossoms (Ōkami), Valley camp (Witcher), Tidepool, Fireplace, Palico,
+Rathalos, Zinogre and Poogie.
+Left/Right cycles them, A triggers a special moment, Up/Down pauses/resumes,
+and Back returns to Watch. The fireplace is a
+full-panel stone background with flowing fire in front. The Python sender has the same scenes:
+`python tools/cozy.py --scene fire`. See [usage and previews](docs/COZY.md).
+[Game proposals and control maps](docs/GAME-IDEAS.md) cover richer d-pad-and-A games.
+
+Python USB tools automatically apply [output gamma correction](docs/COLOR-OUTPUT.md)
+to images, text and fills. `--gamma 1` disables it; `--gamma 2.2` tunes the curve.
+
+**Weather:** `.venv/bin/python tools/run.py weather --location London` fetches
+wttr.in weather with a persistent 30-minute cache. Up/Down selects current,
+forecast or overview; Left/Right selects days or additional readings. Rain,
+snow and other animations follow the displayed condition, with a muted palette
 and stationary text. See [weather usage and previews](docs/WEATHER.md).
 
 **PC stats hub:** with the board's own USB data port connected, run
-`.venv/bin/python tools/pc_hub.py` to automatically select a dashboard with CPU,
+`.venv/bin/python tools/run.py dashboard` to automatically select a dashboard with CPU,
 RAM and GPU usage with coloured meters, plus a green VRAM row below GPU. It updates every two
 seconds and reconnects automatically. Bright labels sit on a pure black background
 for LED matrix contrast. See [setup, preview and options](docs/PC-HUB.md).
-Windows setup and the `tools\pc_hub.cmd` launcher are documented there too.
+Windows setup and the `tools\run.cmd dashboard` launcher are documented there too.
 
 **Canvas** accepts still/streamed backgrounds and eight named text boxes over a
 serial connection. Before its first upload, it displays a USB-to-PC setup hint
@@ -90,8 +118,8 @@ python3 -m venv .venv
 pip install -r tools/requirements.txt
 cargo run -p simulaitor -- --canvas-listen 127.0.0.1:7777
 # In another terminal:
-python3 tools/canvas.py --port tcp://127.0.0.1:7777 layout tools/layouts/weather.json
-python3 tools/canvas.py --port tcp://127.0.0.1:7777 --layout tools/layouts/weather.json text temperature '21°C'
+python3 tools/run.py canvas --port tcp://127.0.0.1:7777 layout tools/displaitor_tools/resources/layouts/weather.json
+python3 tools/run.py canvas --port tcp://127.0.0.1:7777 --layout tools/displaitor_tools/resources/layouts/weather.json text temperature '21°C'
 ```
 
 See [Canvas usage and protocol](docs/CANVAS.md) for backgrounds, streaming,

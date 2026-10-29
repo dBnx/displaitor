@@ -20,6 +20,6 @@ enlarged without smoothing. The video uses decoded copies of the exact QOA
 firmware assets. GIF timing uses the format's 10 ms resolution and merges
 identical adjacent frames. These are software previews, not panel recordings.
 
-Regenerate with `tools/preview_companion_stats.py`; see
+Regenerate with `tools/run.py preview stats`; see
 [the companion guide](../../../PIXEL-COMPANION.md#preview-and-demo-modes) and
 [the sound sources](../../../../assets/audio/CRIES.md).

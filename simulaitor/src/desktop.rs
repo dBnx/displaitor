@@ -1,6 +1,6 @@
 use super::{Framebuffer, render};
 use aitos::{audio::OutputPlayer, input::Debouncer};
-use displaitor::{AudioId, Controls, Engine, HEIGHT, WIDTH};
+use displaitor::{AppId, AudioId, Controls, Engine, HEIGHT, WIDTH};
 use sdl2::{
     audio::{AudioCallback, AudioSpecDesired},
     event::{Event, WindowEvent},
@@ -12,6 +12,7 @@ use std::time::{Duration, Instant};
 pub fn run(
     frames: Option<u32>,
     mut link: Option<super::canvas_link::CanvasLink>,
+    initial_app: Option<AppId>,
 ) -> Result<(), String> {
     if frames == Some(0) {
         return Err("--frames must be greater than zero".into());
@@ -39,6 +40,9 @@ pub fn run(
     let mut bytes = vec![0_u8; (WIDTH * HEIGHT * 3) as usize];
     let mut framebuffer = Framebuffer::new();
     let mut engine = Engine::new();
+    if let Some(app) = initial_app {
+        let _ = engine.open_app(app);
+    }
     if link.is_some() {
         let _ = engine.open_canvas();
     }

@@ -30,7 +30,7 @@ probe-rs gdb --chip RP2040 --probe VID:PID:SERIAL --speed 5000 \
   --gdb-connection-string 127.0.0.1:1337
 # In another terminal:
 GAME_PROFILE_OUTPUT=target/game-profile.json gdb -batch \
-  target/thumbv6m-none-eabi/release/aitos -x tools/profile_games.gdb
+  target/thumbv6m-none-eabi/release/aitos -x tools/displaitor_tools/hardware/profile_games.gdb
 ```
 
 The script resolves the engine from stack or suspended Embassy task DWARF and
@@ -79,7 +79,7 @@ This excludes probe attachment pauses from the measurement window. After
 selecting Nyan, detaching and stopping the GDB server, test DMA pacing:
 
 ```sh
-python tools/check_audio_hw.py --elf /path/to/matching-profiling.elf \
+python tools/run.py hardware audio --elf /path/to/matching-profiling.elf \
   --probe VID:PID:SERIAL --output target/audio-hardware
 ```
 

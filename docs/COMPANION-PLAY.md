@@ -28,7 +28,7 @@ recovery poses.
 
 The character bases are native-resolution game icons distributed by
 [PokéAPI/sprites](https://github.com/PokeAPI/sprites), with source attribution,
-pinned revision and hashes in [the source notes](../tools/art/pokemon-icons/README.md).
+pinned revision and hashes in [the source notes](../tools/displaitor_tools/resources/art/pokemon-icons/README.md).
 They retain recognisable proportions without rescaling. Poses, props, sequencing
 and matrix colour adjustment are project code. The upstream image copyright
 attribution to The Pokémon Company is retained; these are unofficial studies.
@@ -56,10 +56,10 @@ humanoid bodies. Natural props keep the scenes focused on the creatures.
 From the repository root, with the Canvas Python dependencies:
 
 ```sh
-.venv/bin/python tools/companion_play.py
+.venv/bin/python tools/run.py preview play
 # Regenerate either set alone:
-.venv/bin/python tools/companion_play.py --cast pokemon-play
-.venv/bin/python tools/companion_play.py --cast monster-play
+.venv/bin/python tools/run.py preview play --cast pokemon-play
+.venv/bin/python tools/run.py preview play --cast monster-play
 ```
 
 The galleries play every activity at a common nominal 8fps for comparing poses.

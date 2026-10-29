@@ -16,7 +16,8 @@ left marker identify selection. Folder/action markers, truncated labels and
 an edge position indicator remain. Its active scrollbar marker is cyan; the
 inactive track is the lowest neutral grey representable in RGB565, `(1,2,1)`
 (expanded RGB888 `#080808`), separate from the title separator colour. Home contains Names, Watch, Play and Canvas. Watch contains Nyankatz,
-Hyperspace and Campfire; Play contains Pong and Snake. A activates, B returns,
+Hyperspace and all ten autonomous fullscreen scenes: Fireplace, Farm dusk,
+Snow walk, Blossoms, Valley camp, Tidepool, Palico, Rathalos, Zinogre and Poogie. Play contains Pong and Snake. A activates, B returns,
 and up/down move once per press. The connected GPIOs and Select/mute behavior
 are retained. Physical left/right are GPIO18/GPIO23; the legacy labels were
 reversed and are corrected in the board adapter for every application.
@@ -114,6 +115,15 @@ silently leave those arrays undersized or omit the new app from coverage. Add
 smoke inputs that visit the new application too. Compiler exhaustiveness checks
 help locate required runtime changes. All entries
 are active; disabled entries and empty placeholders are not part of the model.
+
+The Cozy apps use deduplicated QOI atlases in Flash, generated from the typed
+Python scene renderers. A constant-validated timeline borrows one frame directly
+for the existing QOI decoder, with no extra framebuffer or allocation. Clip
+metadata supplies the shared advancement and scheduling period (100 ms).
+Repeated frames suppress redraws; paused scenes without a reaction have no autonomous deadline.
+A triggers a 3.2-second sparse overlay without resetting the ambient clock;
+Up/Down pauses/resumes, Left/Right switches scenes, and local B keeps its normal priority
+and returns to the originating menu. See [cozy apps and assets](COZY.md).
 
 Canvas adds retained RGB565 background storage and eight indexed text slots to
 the same direct runtime. Text has bounded UTF-8 storage, three bitmap font sizes,

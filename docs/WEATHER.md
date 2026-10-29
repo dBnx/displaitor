@@ -1,96 +1,129 @@
-# Animated weather
+# Animated live weather
 
-The weather app keeps the muted grey/mint text on black and adds a small pixel
-character above the bottom condition line. **That same condition string selects
-the animation.** “Rain soon” shows a blinking cloud with falling drops. The text
-stays still, and the artwork stays in the upper-right corner.
-Temperature has six reserved medium-font cells, including the sign and unit.
-Values such as `1°C`, `18°C`, `-18°C`, and `-100°C` keep `°C` anchored at the same
-position; changing `18°C` to `-18°C` adds a sign without moving the other digits.
-Values longer than six characters are rejected instead of clipping the unit.
+The weather app uses [wttr.in's JSON API](https://github.com/chubin/wttr.in#json-output)
+for current conditions and a three-day forecast. One response supplies every
+view. The muted grey/mint text stays on black, with a small animated character
+in the upper-right corner: falling rain, drifting snow, sun, cloud, fog or moon.
 
-![Rain soon](ui/weather/rain.gif)
-
-![Sample weather conditions, rendered with actual Canvas text](ui/weather/conditions.png)
-
-Use the same Python environment as Canvas and Pixel Companion:
+With Python **3.12 or newer**, install the host dependencies and run:
 
 ```sh
-python tools/weather.py --status 'Rain soon' --temperature '18°C'
-# Explicit target, including a local simulator:
-python tools/weather.py --port tcp://127.0.0.1:7777 --status 'Snow' --temperature='-2°C'
+python -m pip install -r tools/requirements.txt
+python tools/run.py weather
+python tools/run.py weather --location London
+# Windows example; py can replace python:
+python tools/run.py weather --port COM6 --location London
 ```
 
-`--port auto` selects the board's native USB data connection. Run only one host
-app on that connection at a time. The app runs at eight animation updates per
-second, with acknowledgement backpressure and no frame queue. `--fps` changes
-the upload rate; animation speed follows elapsed time. Back still returns to
-the local menu. The sender does not reopen Canvas on every frame.
+Omitting `--location` lets wttr.in choose a location from your public IP; use an
+explicit city or coordinates for predictable results. `--port auto` selects
+native USB. Run one host app per display. The old `tools/weather.py` launcher
+and Windows `tools\weather.cmd` remain supported.
 
-The initial temperature and condition come from `tools/layouts/weather.json`;
-CLI values override them. These are supplied/example values, **not a weather
-service**. Merely uploading that JSON with `canvas.py layout` remains static;
-run `weather.py` for animation.
+## Views and controls
 
-| Bottom condition, for example | Animation |
+| Input | Action |
 | --- | --- |
-| Rain soon, Light showers, Drizzle | Cloud with falling rain |
-| Sunny, Clear | Smiling sun with gently moving rays |
-| Partly cloudy | Sun peeking behind a cloud |
-| Cloudy, Overcast | Floating, blinking cloud |
-| Snow, Snow showers, Sleet | Cloud with drifting snowflakes |
-| Fog, Mist | Cloud with moving mist lines |
-| Thunderstorm, Storm | Rain cloud with a small steady lightning bolt |
-| Clear night | Crescent moon and twinkling stars |
-| Unrecognized or negated text | Neutral animated dots |
+| Up / Down | Cycle current weather, forecast and information overview |
+| Left / Right in forecast | Select one of three forecast days |
+| Left / Right in overview | Switch the two information sheets |
+| Back (B) | Return to the board's local menu |
 
-Matching uses English words, with storms/snow/rain taking priority over cloud
-or clear words. It deliberately leaves negated clauses such as “No chance of
-rain” neutral. There are no whole-panel lightning flashes or scene cycles.
+The current view shows temperature and condition. Forecast shows the selected
+day's high, low, maximum precipitation probability and maximum UV. Overview
+shows temperature, precipitation in mm, current UV and humidity; its second
+sheet shows feels-like temperature, wind in km/h, daily precipitation probability
+and daily maximum UV. Precipitation probability includes rain and snow. Forecast
+artwork follows the selected day's representative midday condition.
 
-For a weather provider or another host app, pass new readings to `Weather.update`
-on the same connection. Text and artwork publish together, so changing “Rain
-soon” to “Sunny” also changes the animation:
+Text has fixed positions and reserved widths. The main temperature reserves six
+medium-font cells, including the minus sign and `°C`. Overview values align to a
+fixed right edge; `1%` and `100%` keep their units in place. Unknown readings show
+`--` with their units. Missing values never become zero.
+
+The animation uploads at eight updates/s by default, with acknowledgement
+backpressure and cached unchanged text. HTTP runs on one background worker,
+outside rendering. Page changes publish atomically without reopening Canvas;
+pressing Back keeps the local menu visible. `--fps` changes upload rate, while
+animation speed follows elapsed time. Older firmware without button support can
+still display a view selected with `--view now|forecast|info`; `--no-buttons`
+disables button polling explicitly.
+
+## Requests, cache and failures
+
+The default provider interval is **30 minutes**. `--refresh` accepts seconds with
+a **15-minute minimum**. Animation, D-pad presses, USB reconnects and app restarts
+do not force another request. Failed requests back off from the configured
+interval, doubling up to six hours (or the configured interval if longer).
+An eight-second HTTP timeout and a bounded response size limit provider work.
+
+Per-location cache and retry state persist in the OS user cache directory:
+
+- Linux: `$XDG_CACHE_HOME/displaitor/weather`, or `~/.cache/displaitor/weather`.
+- Windows: `%LOCALAPPDATA%\Displaitor\weather`.
+
+`--cache-dir PATH` overrides that location. Atomic replacement and a short-lived
+lease prevent simultaneous apps sharing that cache from duplicating requests.
+The next request time is saved before HTTP, so a crash does not cause a retry
+loop. The cache contains provider readings and the resolved location; it is
+local and is not part of the repository.
+
+The small bottom-right marker reports freshness since the last successful fetch:
+
+| Marker | Meaning |
+| --- | --- |
+| LIVE | Cached provider response is within the freshness window |
+| OLD | Refresh failed or data aged; last good readings retained for up to six hours |
+| WAIT | Waiting for the first response |
+| ERR | No usable reading and the request failed |
+| DEMO | Explicit offline sample data |
+
+After six hours without success, numeric readings disappear. No sample weather
+is substituted when the provider is unavailable. Provider observation times may
+precede fetch time; `LIVE` describes the fetch, not a measurement on this board.
+
+## Offline samples and previews
+
+```sh
+# All views and D-pad controls, with explicit sample values and no HTTP:
+python tools/run.py weather --demo
+# Supplied values select manual mode, also without HTTP:
+python tools/run.py weather --status 'Rain soon' --temperature '18°C'
+python tools/run.py weather --status Snow --temperature='-2°C'
+
+# Capture actual Rust Canvas text without contacting hardware or wttr.in:
+cargo build -p simulaitor --no-default-features
+python tools/run.py preview weather --output-dir target/weather-views
+# Original individual condition gallery:
+python tools/run.py weather --preview-dir target/weather-conditions
+```
+
+![Offline samples of all weather views, rendered by Rust Canvas](ui/weather/views.png)
+
+The preview exporter writes a gallery, individual PNGs and animated GIFs. All
+artwork is RGB565-quantized; text comes from the real Rust renderer. “Rain soon”
+selects a cloud with falling drops; snow selects a cloud with drifting flakes.
+Unknown or negated descriptions use neutral dots. There are no whole-panel
+lightning flashes.
+
+The existing typed `Weather` interface remains available to other scripts:
 
 ```python
-import time
 from tools.canvas import Client
 from tools.weather import Weather
 
 weather = Weather(temperature="18°C", status="Rain soon")
-with Client("/dev/serial/by-id/usb-Displaitor_Displaitor_Canvas_canvas-1-if00") as display:
+with Client("COM6") as display:
     weather.install(display)
-    previous = time.monotonic()
-    while True:
-        time.sleep(0.125)
-        now = time.monotonic()
-        # Replace these with your provider's latest reading.
-        weather.update(display, now - previous, temperature="21°C", status="Sunny")
-        previous = now
+    weather.update(display, 0.125, temperature="-2°C", status="Snow")
 ```
 
-Update through this method rather than sending status text separately: the
-sender owns the condition used to choose the artwork. Text uses the same
-printable Latin-1/64-byte bounds as Canvas; the bottom line shows up to 15 small
-characters. Firmware changes are not required.
+Update text and artwork together through `Weather.update`. This manual interface
+does not fetch weather. The static `tools/displaitor_tools/resources/layouts/weather.json` is also a
+supplied layout example; loading it alone does not start the live app.
 
-Regenerate the sample PNGs and looping GIFs without contacting a board:
-
-```sh
-cargo build -p simulaitor --no-default-features
-python tools/weather.py --preview-dir docs/ui/weather
-```
-
-The previews use actual Rust-rendered text and RGB565-quantized sprite frames.
-Tests check condition priority, downward rain motion, every frame's text
-clearance, atomic reading changes, reconnect/cache behavior, and actual Rust
-rendering with opaque text backgrounds.
-
-Validation: all 65 Python tests passed, including eight weather tests. Native
-USB completed a 48-update rain run at eight updates/s without timeouts (27.6 ms
-median and 28.4 ms maximum acknowledged update latency). A subsequent 32-update
-snow run accepted `-18°C`, `18°C`, `1°C` and `-100°C` while captured text packets
-kept the unit in the same six-cell field. Actual Rust snapshots check fixed
-units and removal of old digits/minus signs. The weather palette and rain
-animation were visually confirmed on the panel. These hardware runs used local
-builds; the neutral public sample is qualified offline.
+Offline tests cover provider parsing, missing readings, refresh budgets,
+persistent retry state, concurrent requests, failed caches, expired data, D-pad
+navigation, fixed field widths and actual Canvas rendering. The new live views
+have not been tested on physical hardware; earlier manual weather animations
+and palette were confirmed on the panel.

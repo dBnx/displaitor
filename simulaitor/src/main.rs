@@ -17,6 +17,7 @@ fn main() -> Result<(), String> {
     let mut smoke = false;
     let mut canvas_address = None;
     let mut snapshot = None;
+    let mut initial_app = None;
     let mut arguments = std::env::args().skip(1);
     while let Some(argument) = arguments.next() {
         match argument.as_str() {
@@ -27,6 +28,25 @@ fn main() -> Result<(), String> {
                 snapshot = Some(arguments.next().ok_or("--snapshot requires a PPM path")?)
             }
             "--headless" => headless = true,
+            "--cozy" => {
+                initial_app = Some(match arguments.next().as_deref() {
+                    Some("farm") => AppId::CozyFarm,
+                    Some("winter") => AppId::CozyWinter,
+                    Some("okami") => AppId::CozyOkami,
+                    Some("witcher") => AppId::CozyWitcher,
+                    Some("palico") => AppId::CozyPalico,
+                    Some("rathalos") => AppId::CozyRathalos,
+                    Some("zinogre") => AppId::CozyZinogre,
+                    Some("poogie") => AppId::CozyPoogie,
+                    Some("reef") => AppId::CozyReef,
+                    Some("fire") => AppId::Fire,
+                    _ => {
+                        return Err(
+                            "--cozy requires farm, winter, okami, witcher, reef, fire, palico, rathalos, zinogre or poogie".into()
+                        );
+                    }
+                });
+            }
             "--smoke" => {
                 headless = true;
                 smoke = true;
@@ -42,7 +62,7 @@ fn main() -> Result<(), String> {
             }
             "--help" | "-h" => {
                 println!(
-                    "simulaitor [--headless | --smoke] [--frames N] [--canvas-listen 127.0.0.1:7777] [--snapshot frame.ppm]\n\nW/S/A/D: directions; Space: A/select; Q: B/back; R: mute on release\nEscape: quit. --smoke exercises every application without SDL or audio.\n--canvas-listen locally opens Canvas. Headless Canvas runs in real time."
+                    "simulaitor [--headless | --smoke] [--frames N] [--cozy farm|winter|okami|witcher|reef|fire|palico|rathalos|zinogre|poogie] [--canvas-listen 127.0.0.1:7777] [--snapshot frame.ppm]\n\nW/S/A/D: directions; Space: A/select; Q: B/back; R: mute on release\nEscape: quit. --smoke exercises every application without SDL or audio.\n--cozy locally opens a built-in scene without a host script.\n--canvas-listen locally opens Canvas. Headless Canvas runs in real time."
                 );
                 return Ok(());
             }
@@ -52,6 +72,9 @@ fn main() -> Result<(), String> {
     if smoke && canvas_address.is_some() {
         return Err("--smoke and --canvas-listen are separate modes".into());
     }
+    if initial_app.is_some() && (smoke || canvas_address.is_some()) {
+        return Err("--cozy, --smoke and --canvas-listen are separate modes".into());
+    }
     if snapshot.is_some() && !headless {
         return Err("--snapshot requires --headless".into());
     }
@@ -60,11 +83,17 @@ fn main() -> Result<(), String> {
         .map(canvas_link::CanvasLink::bind)
         .transpose()?;
     if headless {
-        return run_headless(frames.unwrap_or(600), smoke, link, snapshot.as_deref());
+        return run_headless(
+            frames.unwrap_or(600),
+            smoke,
+            link,
+            snapshot.as_deref(),
+            initial_app,
+        );
     }
     #[cfg(feature = "sdl")]
     {
-        desktop::run(frames, link)
+        desktop::run(frames, link, initial_app)
     }
     #[cfg(not(feature = "sdl"))]
     {
@@ -83,17 +112,21 @@ fn run_headless(
     smoke: bool,
     mut link: Option<canvas_link::CanvasLink>,
     snapshot: Option<&str>,
+    initial_app: Option<AppId>,
 ) -> Result<(), String> {
     if frames == 0 {
         return Err("--frames must be greater than zero".into());
     }
     let mut engine = Engine::new();
+    if let Some(app) = initial_app {
+        let _ = engine.open_app(app);
+    }
     if link.is_some() {
         let _ = engine.open_canvas();
     }
     let mut framebuffer = Framebuffer::new();
-    if smoke && frames < 390 {
-        return Err("--smoke requires at least 390 frames".into());
+    if smoke && frames < 580 {
+        return Err("--smoke requires at least 580 frames".into());
     }
     let mut debounce = Debouncer::default();
     let mut visited = [false; 1 + DEFAULT_MENU_COUNT + AppId::COUNT];
@@ -153,34 +186,39 @@ fn run_headless(
 }
 
 fn smoke_input(frame: u32) -> Controls {
-    // Every press spans three 10 ms updates, followed by at least 70 ms released.
-    // Skip splash, open menu, animations and each child, then games.
-    let mut controls = Controls::default();
-    let button = match frame {
-        5..=7
-        | 20..=22
-        | 100..=102
-        | 150..=152
-        | 200..=202
-        | 220..=222
-        | 290..=292
-        | 350..=352
-        | 360..=362 => 1,
-        30..=32 | 110..=112 | 160..=162 | 230..=232 | 300..=302 | 370..=372 => 2,
-        40..=42
-        | 70..=72
-        | 120..=122
-        | 170..=172
-        | 240..=242
-        | 250..=252
-        | 320..=322
-        | 380..=382 => 3,
-        _ => 0,
+    // Three 10 ms pressed updates, then seven released. Visit each Watch
+    // entry through its actual menu, followed by both games and Canvas.
+    // Codes: Back=1, Down=2, A=3. Keep this route aligned with the stock catalog.
+    const PRESSES: &[u8] = &[
+        1, 1, 2, 3, // Skip splash/name screen, enter Watch.
+        3, 1, 2, // Nyankatz.
+        3, 1, 2, // Hyperspace.
+        3, 1, 2, // Fireplace.
+        3, 1, 2, // Farm.
+        3, 1, 2, // Winter.
+        3, 1, 2, // Okami.
+        3, 1, 2, // Witcher.
+        3, 1, 2, // Reef.
+        3, 1, 2, // Palico.
+        3, 1, 2, // Rathalos.
+        3, 1, 2, // Zinogre.
+        3, 1, 2, // Poogie, then wrap to first entry.
+        1, 2, 3, // Home, Play.
+        3, 1, 2, 3, 1, 1, // Pong, Snake, Home.
+        2, 3, 1, // Canvas, Home.
+    ];
+    let offset = frame.saturating_sub(5);
+    let button = if frame >= 5 && offset % 10 < 3 {
+        PRESSES.get((offset / 10) as usize).copied().unwrap_or(0)
+    } else {
+        0
     };
+    let mut controls = Controls::default();
     match button {
         1 => controls.buttons_b = true,
         2 => controls.dpad_down = true,
         3 => controls.buttons_a = true,
+        4 => controls.dpad_right = true,
         _ => {}
     }
     controls

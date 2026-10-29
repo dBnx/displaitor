@@ -1,0 +1,6 @@
+-r requirements.txt
+-r requirements-validation.txt
+mypy==2.4.0
+types-pyserial>=3.5,<4
+types-psutil>=7,<9
+build>=1.2,<2

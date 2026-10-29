@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=77,<85"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "displaitor-tools"
+version = "0.1.0"
+description = "Typed Canvas SDK, custom scenes and companion apps for Displaitor displays"
+readme = "tools/LIBRARY.md"
+requires-python = ">=3.12"
+license = "MIT OR Apache-2.0"
+license-files = ["tools/DISTRIBUTION-NOTICE.md", "tools/displaitor_tools/audio/LICENSE-QOA.txt", "tools/displaitor_tools/resources/art/*/README.md"]
+dependencies = ["Pillow>=12.0.0,<14", "pyserial>=3.5,<4", "psutil>=7,<9"]
+classifiers = [
+    "Programming Language :: Python :: 3 :: Only",
+    "Operating System :: OS Independent",
+    "Typing :: Typed",
+]
+
+[project.scripts]
+displaitor = "displaitor_tools.cli:main"
+
+[project.optional-dependencies]
+dev = ["build>=1.2,<2", "mypy==2.4.0", "types-pyserial>=3.5,<4", "types-psutil>=7,<9"]
+validation = ["pyelftools==0.33", "unicorn==2.1.4"]
+
+[tool.setuptools]
+package-dir = {"" = "tools"}
+include-package-data = false
+
+[tool.setuptools.packages.find]
+where = ["tools"]
+include = ["displaitor_tools", "displaitor_tools.*"]
+namespaces = false
+
+[tool.setuptools.package-data]
+displaitor_tools = ["py.typed", "resources/layouts/*.json", "resources/examples/*.py", "resources/art/*/*.png", "resources/art/*/sources.json", "resources/art/*/README.md", "audio/LICENSE-QOA.txt", "hardware/*.gdb"]
+
+[tool.mypy]
+python_version = "3.12"
+files = ["tools/displaitor_tools"]
+mypy_path = "tools"
+strict = true
+show_error_codes = true

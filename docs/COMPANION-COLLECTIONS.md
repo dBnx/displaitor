@@ -59,9 +59,9 @@ Native cells are 40×32 pixels with no HUD. Enlargements use nearest neighbour.
 From the repository root, with the existing Canvas Python dependencies:
 
 ```sh
-.venv/bin/python tools/companion_collections.py
+.venv/bin/python tools/run.py preview collections
 # Or regenerate only one set:
-.venv/bin/python tools/companion_collections.py --collection pokemon
+.venv/bin/python tools/run.py preview collections --collection pokemon
 ```
 
 The generator needs no simulator, serial connection or board. All draw

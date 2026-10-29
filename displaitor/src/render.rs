@@ -13,7 +13,7 @@ use embedded_graphics::{
 use tinyqoi::Qoi;
 
 use crate::{
-    AppId, Engine, HEIGHT, Screen, WIDTH, content,
+    AppId, Engine, HEIGHT, Screen, WIDTH, content, cozy,
     games::{Cell, Pong},
     menu_view::{self, EntryKind, MenuRow, MenuView},
     navigation::Action,
@@ -59,20 +59,87 @@ impl<const N: usize> Engine<N> {
         if self.screen == Screen::App(AppId::Canvas) {
             return self.canvas.render(&mut target);
         }
-        target.clear(Rgb565::BLACK)?;
+        // Cozy clips are opaque and cover the whole panel. Decode once into the
+        // existing back buffer, without first writing 2048 redundant black pixels.
+        if !matches!(
+            self.screen,
+            Screen::App(
+                AppId::CozyFarm
+                    | AppId::CozyWinter
+                    | AppId::CozyOkami
+                    | AppId::CozyWitcher
+                    | AppId::CozyReef
+                    | AppId::Fire
+                    | AppId::CozyPalico
+                    | AppId::CozyRathalos
+                    | AppId::CozyZinogre
+                    | AppId::CozyPoogie
+            )
+        ) {
+            target.clear(Rgb565::BLACK)?;
+        }
         match self.screen {
-            Screen::Splash | Screen::App(AppId::Nyan | AppId::Hyper | AppId::Fire) => {
-                let app = match self.screen {
-                    Screen::App(id) => Some(id),
-                    _ => None,
+            Screen::Splash
+            | Screen::App(
+                AppId::Nyan
+                | AppId::Hyper
+                | AppId::CozyFarm
+                | AppId::CozyWinter
+                | AppId::CozyOkami
+                | AppId::CozyWitcher
+                | AppId::CozyReef
+                | AppId::Fire
+                | AppId::CozyPalico
+                | AppId::CozyRathalos
+                | AppId::CozyZinogre
+                | AppId::CozyPoogie,
+            ) => {
+                let bytes = match self.screen {
+                    Screen::App(
+                        id @ (AppId::CozyFarm
+                        | AppId::CozyWinter
+                        | AppId::CozyOkami
+                        | AppId::CozyWitcher
+                        | AppId::CozyReef
+                        | AppId::Fire
+                        | AppId::CozyPalico
+                        | AppId::CozyRathalos
+                        | AppId::CozyZinogre
+                        | AppId::CozyPoogie),
+                    ) => cozy::clip(id).frame(self.frame),
+                    Screen::App(id) => content::frames(Some(id))[self.frame],
+                    _ => content::frames(None)[self.frame],
                 };
-                let bytes = content::frames(app)[self.frame];
                 // Assets are validated in host tests. A malformed replacement must
                 // not panic firmware; display an actionable fallback instead.
                 if let Ok(image) = Qoi::new(bytes) {
                     let mut rgb888 = target.color_converted::<Rgb888>();
-                    Image::with_center(&image, Point::new(32, 16)).draw(&mut rgb888)?;
+                    let positioned = if matches!(
+                        self.screen,
+                        Screen::App(
+                            AppId::CozyFarm
+                                | AppId::CozyWinter
+                                | AppId::CozyOkami
+                                | AppId::CozyWitcher
+                                | AppId::CozyReef
+                                | AppId::Fire
+                                | AppId::CozyPalico
+                                | AppId::CozyRathalos
+                                | AppId::CozyZinogre
+                                | AppId::CozyPoogie
+                        )
+                    ) {
+                        Image::new(&image, Point::zero())
+                    } else {
+                        Image::with_center(&image, Point::new(32, 16))
+                    };
+                    positioned.draw(&mut rgb888)?;
+                    if let (Screen::App(id), Some(us)) = (self.screen, self.cozy_action_us) {
+                        cozy::action(id)
+                            .draw((us / cozy::ACTION_PERIOD_US) as usize, &mut target)?;
+                    }
                 } else {
+                    target.clear(Rgb565::BLACK)?;
                     text("Bad asset", Point::new(0, 10), Rgb565::RED, &mut target)?;
                 }
             }
@@ -236,12 +303,7 @@ mod tests {
 
     #[test]
     fn every_embedded_image_decodes_the_expected_pixels() {
-        for app in [
-            None,
-            Some(AppId::Nyan),
-            Some(AppId::Hyper),
-            Some(AppId::Fire),
-        ] {
+        for app in [None, Some(AppId::Nyan), Some(AppId::Hyper)] {
             for bytes in content::frames(app) {
                 let image = Qoi::new(bytes).expect("Embedded QOI asset");
                 // The original first logo is one pixel wider than the panel.

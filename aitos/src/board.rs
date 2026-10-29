@@ -1,7 +1,7 @@
 use aitos::{display::PanelTarget, runtime::Runtime};
 use core::future::pending;
 use defmt_rtt as _;
-use displaitor::Engine;
+use displaitor::{AppId, Engine, Screen};
 use embassy_executor::Spawner;
 use embassy_futures::select::select4;
 use embassy_rp::{
@@ -171,7 +171,12 @@ async fn main(_spawner: Spawner) {
         if redraw && let Some(back) = frame.take() {
             #[cfg(feature = "profiling")]
             let render_start = Instant::now().as_micros();
-            engine.render(&mut PanelTarget(&mut *back)).unwrap();
+            let mut target = if engine.screen() == Screen::App(AppId::Canvas) {
+                PanelTarget::canvas(&mut *back)
+            } else {
+                PanelTarget::native(&mut *back)
+            };
+            engine.render(&mut target).unwrap();
             #[cfg(feature = "profiling")]
             {
                 profiling.record(

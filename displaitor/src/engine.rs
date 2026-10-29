@@ -1,5 +1,5 @@
 use crate::{
-    AudioId, Controls, content,
+    AudioId, Controls, content, cozy,
     games::{Pong, Snake},
     navigation::{Action, Direction, Menu, MenuId, Navigation, NavigationError},
 };
@@ -38,6 +38,15 @@ application_ids! {
     Pong,
     Snake,
     Canvas,
+    CozyFarm,
+    CozyWinter,
+    CozyOkami,
+    CozyWitcher,
+    CozyReef,
+    CozyPalico,
+    CozyRathalos,
+    CozyZinogre,
+    CozyPoogie,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -69,7 +78,7 @@ pub const DEFAULT_MENU_COUNT: usize = content::MENUS.len();
 ///
 /// Menu depth never enters update/render dispatch. `N` sizes the cursor array,
 /// not a stack; idle work and navigation transitions are constant time. The
-/// default catalog has three menus; custom static trees use `with_menus`.
+/// default catalog has four menus; custom static trees use `with_menus`.
 pub struct Engine<const N: usize = DEFAULT_MENU_COUNT> {
     pub(crate) canvas: crate::canvas::Canvas,
     pub(crate) screen: Screen,
@@ -86,6 +95,8 @@ pub struct Engine<const N: usize = DEFAULT_MENU_COUNT> {
     pub(crate) next_color: Rgb565,
     random: u32,
     game: Game,
+    cozy_paused: bool,
+    pub(crate) cozy_action_us: Option<u64>,
 }
 
 impl Default for Engine<DEFAULT_MENU_COUNT> {
@@ -121,6 +132,8 @@ impl<const N: usize> Engine<N> {
             next_color: Rgb565::new(0, 63, 31),
             random: 0xdead_beef,
             game: Game::None,
+            cozy_paused: false,
+            cozy_action_us: None,
         })
     }
     pub const fn screen(&self) -> Screen {
@@ -139,14 +152,39 @@ impl<const N: usize> Engine<N> {
             }
             Screen::Menu(_) | Screen::App(AppId::Canvas) => return None,
             Screen::App(AppId::Names) => NAMES_PERIOD_US,
-            Screen::App(AppId::Nyan | AppId::Hyper | AppId::Fire) => ANIMATION_PERIOD_US,
+            Screen::App(AppId::Nyan | AppId::Hyper) => ANIMATION_PERIOD_US,
+            Screen::App(
+                id @ (AppId::CozyFarm
+                | AppId::CozyWinter
+                | AppId::CozyOkami
+                | AppId::CozyWitcher
+                | AppId::CozyReef
+                | AppId::Fire
+                | AppId::CozyPalico
+                | AppId::CozyRathalos
+                | AppId::CozyZinogre
+                | AppId::CozyPoogie),
+            ) => {
+                let ambient = (!self.cozy_paused)
+                    .then(|| cozy::clip(id).period_us().saturating_sub(self.timer_us));
+                let action = self
+                    .cozy_action_us
+                    .map(|us| cozy::ACTION_PERIOD_US - us % cozy::ACTION_PERIOD_US);
+                return ambient
+                    .into_iter()
+                    .chain(action)
+                    .min()
+                    .map(Duration::from_micros);
+            }
             Screen::App(AppId::Pong) => PONG_PERIOD_US,
             Screen::App(AppId::Snake) if self.game_over() => return None,
             Screen::App(AppId::Snake) => SNAKE_PERIOD_US,
         };
-        Some(Duration::from_micros(
-            period_us.saturating_sub(self.timer_us),
-        ))
+        let remaining = period_us.saturating_sub(self.timer_us);
+        let remaining = self.cozy_action_us.map_or(remaining, |us| {
+            remaining.min(cozy::ACTION_PERIOD_US - us % cozy::ACTION_PERIOD_US)
+        });
+        Some(Duration::from_micros(remaining))
     }
     pub fn canvas_mut(&mut self) -> &mut crate::canvas::Canvas {
         &mut self.canvas
@@ -156,9 +194,13 @@ impl<const N: usize> Engine<N> {
     }
     /// Immediate local platform launch (e.g. simulator CLI).
     pub fn open_canvas(&mut self) -> Update {
-        let update = self.enter_app(AppId::Canvas);
+        self.open_app(AppId::Canvas)
+    }
+    /// Immediate local platform launch, with the same entry/reset policy as a menu.
+    pub fn open_app(&mut self, app: AppId) -> Update {
+        let update = self.enter_app(app);
         self.canvas
-            .record_buttons(Duration::ZERO, self.previous, true);
+            .record_buttons(Duration::ZERO, self.previous, app == AppId::Canvas);
         update
     }
     /// Queue explicit remote activation for the normal update/audio/render path.
@@ -288,12 +330,46 @@ impl<const N: usize> Engine<N> {
                 }
                 update.redraw |= steps != 0;
             }
-            Screen::App(id @ (AppId::Nyan | AppId::Hyper | AppId::Fire)) => {
+            Screen::App(id @ (AppId::Nyan | AppId::Hyper)) => {
                 let steps = self.ticks(elapsed, ANIMATION_PERIOD_US);
+                update.redraw |= self.advance_movie_action(elapsed, edges.buttons_a);
                 let count = content::frames(Some(id)).len();
                 let next = (self.frame + (steps % count as u128) as usize) % count;
                 update.redraw |= next != self.frame;
                 self.frame = next;
+            }
+            Screen::App(
+                id @ (AppId::CozyFarm
+                | AppId::CozyWinter
+                | AppId::CozyOkami
+                | AppId::CozyWitcher
+                | AppId::CozyReef
+                | AppId::Fire
+                | AppId::CozyPalico
+                | AppId::CozyRathalos
+                | AppId::CozyZinogre
+                | AppId::CozyPoogie),
+            ) => {
+                if edges.dpad_left != edges.dpad_right {
+                    let paused = self.cozy_paused;
+                    let next = cozy::adjacent(id, edges.dpad_right);
+                    let effects = self.enter_app(next);
+                    self.cozy_paused = paused;
+                    return effects;
+                }
+                if !self.cozy_paused {
+                    let clip = cozy::clip(id);
+                    let steps = self.ticks(elapsed, clip.period_us());
+                    let next = (self.frame + (steps % clip.len() as u128) as usize) % clip.len();
+                    update.redraw |= clip.frame_id(next) != clip.frame_id(self.frame);
+                    self.frame = next;
+                }
+                update.redraw |= self.advance_movie_action(elapsed, edges.buttons_a);
+                // Elapsed time belongs to the state before this input edge:
+                // pausing includes it; resuming never advances across the pause.
+                if edges.dpad_up != edges.dpad_down {
+                    self.cozy_paused = edges.dpad_up;
+                }
             }
             Screen::App(AppId::Pong) => {
                 let steps = self.ticks(elapsed.min(Duration::from_millis(250)), PONG_PERIOD_US);
@@ -334,10 +410,28 @@ impl<const N: usize> Engine<N> {
         self.random ^= self.random << 5;
         self.random
     }
+    fn advance_movie_action(&mut self, elapsed: Duration, pressed: bool) -> bool {
+        let mut redraw = false;
+        if let Some(before) = self.cozy_action_us {
+            let after = (u128::from(before) + elapsed.as_micros())
+                .min(u128::from(cozy::ACTION_DURATION_US)) as u64;
+            self.cozy_action_us = (after < cozy::ACTION_DURATION_US).then_some(after);
+            redraw = self.cozy_action_us.is_none()
+                || before / cozy::ACTION_PERIOD_US != after / cozy::ACTION_PERIOD_US;
+        }
+        if pressed {
+            self.cozy_action_us = Some(0);
+            redraw = true;
+        }
+        redraw
+    }
+
     fn enter_app(&mut self, id: AppId) -> Update {
         self.screen = Screen::App(id);
         self.timer_us = 0;
         self.frame = 0;
+        self.cozy_paused = false;
+        self.cozy_action_us = None;
         self.name_offset = 0;
         self.name_index = 0;
         self.name_next = 1 % content::NAME_COUNT;

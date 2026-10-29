@@ -6,11 +6,11 @@ name. The computer converts images; the device retains and composites the layers
 There is no firmware rebuild for a new layout.
 For a ready-to-run PC dashboard, see the [PC stats hub](PC-HUB.md).
 For an idle character that exercises harder as CPU/GPU load rises, run
-`tools/pixel_companion.py`; see [Pixel Companion](PIXEL-COMPANION.md).
+`tools/run.py companion`; see [Pixel Companion](PIXEL-COMPANION.md).
 
 Before the first scene upload after boot, Canvas shows setup instructions:
 connect its USB data port to a PC and run a provided script, with
-`tools/pc_hub.py` as an example. Info requests and invalid packets retain this
+`tools/run.py dashboard` as an example. Info requests and invalid packets retain this
 message. Any valid background/layout/text/style upload replaces it, including an
 intentional black background or empty layout. Disconnecting does not bring it
 back or cover retained content. This is a first-use hint, not USB-link detection.
@@ -21,7 +21,7 @@ back or cover retained content. This is a first-use hint, not USB-link detection
 
 ## Try it without hardware
 
-The helper requires Python 3.10 or later. Pillow handles images; pyserial handles
+The helper requires Python 3.12 or later. Pillow handles images; pyserial handles
 serial ports. The protocol and simulator connection use the standard library.
 From the repository root:
 
@@ -35,10 +35,10 @@ cargo run -p simulaitor -- --canvas-listen 127.0.0.1:7777
 In another terminal, using the same Python environment:
 
 ```sh
-python3 tools/canvas.py --port tcp://127.0.0.1:7777 layout tools/layouts/weather.json
-python3 tools/canvas.py --port tcp://127.0.0.1:7777 fill '#103050'
-python3 tools/canvas.py --port tcp://127.0.0.1:7777 --layout tools/layouts/weather.json text temperature '21°C'
-python3 tools/canvas.py --port tcp://127.0.0.1:7777 --layout tools/layouts/weather.json style temperature --color '#B8C8C0' --background '#000000'
+python3 tools/run.py canvas --port tcp://127.0.0.1:7777 layout tools/displaitor_tools/resources/layouts/weather.json
+python3 tools/run.py canvas --port tcp://127.0.0.1:7777 fill '#103050'
+python3 tools/run.py canvas --port tcp://127.0.0.1:7777 --layout tools/displaitor_tools/resources/layouts/weather.json text temperature '21°C'
+python3 tools/run.py canvas --port tcp://127.0.0.1:7777 --layout tools/displaitor_tools/resources/layouts/weather.json style temperature --color '#B8C8C0' --background '#000000'
 ```
 
 The simulator's `--canvas-listen` option locally opens Canvas. The endpoint binds
@@ -56,12 +56,13 @@ RP2040 performance measurement. Ordinary smoke mode remains deterministic.
 The weather example uses black text boxes with muted grey/mint foregrounds for
 the LED panel. Its initial values are a layout example, not a live weather feed.
 For cute animations driven by its bottom condition text, run
-`python tools/weather.py --status 'Rain soon'`. See the [animated weather app](WEATHER.md)
+`python tools/run.py weather --status 'Rain soon'`. For live wttr.in weather and
+D-pad views, run `python tools/run.py weather` instead. See the [animated weather app](WEATHER.md)
 for rain, sun, clouds, snow, fog, storms and clear nights.
 
 ![Animated weather with an anchored temperature, rendered by the Rust simulator](ui/weather/rain.gif)
 
-`tools/layouts/weather.json` is a complete example:
+`tools/displaitor_tools/resources/layouts/weather.json` is a complete example:
 
 ```json
 {
@@ -138,8 +139,8 @@ requirement for older firmware. Existing older clients can still send commands
 ## Images and streaming
 
 ```sh
-python3 tools/canvas.py --port tcp://127.0.0.1:7777 background clouds.png
-python3 tools/canvas.py --port tcp://127.0.0.1:7777 stream clouds.gif --fps 20 --repeat
+python3 tools/run.py canvas --port tcp://127.0.0.1:7777 background clouds.png
+python3 tools/run.py canvas --port tcp://127.0.0.1:7777 stream clouds.gif --fps 20 --repeat
 ```
 
 The helper accepts Pillow-supported still and animated image files, or a sequence
@@ -157,7 +158,7 @@ packet exchanges are serialized so background and text bytes cannot interleave:
 from tools.canvas import Client
 
 with Client("tcp://127.0.0.1:7777") as display:
-    display.layout("tools/layouts/weather.json")
+    display.layout("tools/displaitor_tools/resources/layouts/weather.json")
     with display.streaming("clouds.gif", fps=20):
         display.text("temperature", "21°C")
         display.style("temperature", color="#B8C8C0", background="#000000")
@@ -198,7 +199,7 @@ The `--baud` option configures a host serial port, but native USB CDC pixel
 transfers do not run at that UART baud rate.
 
 Select **Canvas** in Home to display uploaded content, or run
-`python3 tools/canvas.py --port YOUR-DEVICE show` (`display.show()` in scripts).
+`python3 tools/run.py canvas --port YOUR-DEVICE show` (`display.show()` in scripts).
 The explicit Show command selects Canvas once through the normal UI update path,
 stopping prior app audio and requesting a redraw. An already-open Canvas stays
 intact. B pressed in the same update takes priority. Reception also works while
@@ -309,11 +310,28 @@ and he subsequently confirmed the corrected panel colours looked good; see
 
 ### Windows COM read timeout
 
-Serial reads use at most 50 ms per call, including reads inside the reply parser.
+Serial reads use a fixed timeout of at most 50 ms, configured once when opening
+the port. The reply parser never assigns `Serial.timeout`: pyserial's setter
+reconfigures an open COM port even when the value is unchanged. Guarding the
+assignment with an equality check is insufficient because it still reconfigures
+the port as the overall deadline approaches.
 An empty short read keeps waiting for the same reply, preserving partial COBS
 frames until the configured overall acknowledgement deadline (default 3 s).
+The final polling read can exceed that deadline by at most one read interval;
+deadlines below 50 ms select their shorter fixed interval at open time.
 The write timeout still uses that configured deadline. TCP timeouts and EOF
 handling are unchanged. This avoids long blocking COM reads without treating a
 normal gap between USB packets as a failed command. Host-only regression tests
-simulate fragmented Windows-style replies, missing ACKs and deadlines below
-50 ms; physical Windows USB operation still needs checking.
+use pyserial's real property setter and simulate fragmented replies, ACKs in the
+last polling interval, missing ACKs and deadlines below 50 ms. They assert that
+no serial reconfiguration occurs after open. Physical Windows USB operation
+still needs checking.
+
+## Host output gamma
+
+The Python SDK automatically applies gamma 2.8 on serial/USB connections, covering
+background frames, initial text colours, style changes and fills. TCP connections
+retain identity output for desktop simulators. All live apps and the Canvas CLI
+accept `--gamma`; use `--gamma 1` to disable correction. Raw `color565()` and
+`image_frame()` remain logical RGB565 encoders, so assets/previews are not
+corrected twice. See [colour output and calibration](COLOR-OUTPUT.md).

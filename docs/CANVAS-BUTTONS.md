@@ -57,7 +57,7 @@ live metrics without button actions, with a clear update message.
 For a single-client diagnostic, stop any sender that owns the port, then run:
 
 ```sh
-python tools/canvas.py --port YOUR-DEVICE buttons --watch
+python tools/run.py canvas --port YOUR-DEVICE buttons --watch
 ```
 
 Without `--watch`, it prints the current baseline once. Polling and streaming
@@ -108,7 +108,7 @@ disables cries; `--no-buttons` disables all host input actions.
 For a single-client audition on connected, updated firmware:
 
 ```sh
-python tools/canvas.py --port YOUR-DEVICE cry torchic
+python tools/run.py canvas --port YOUR-DEVICE cry torchic
 ```
 
 Canvas must already be the active local app. See [the original synthesis and
